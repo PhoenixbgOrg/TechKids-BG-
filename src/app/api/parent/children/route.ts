@@ -6,7 +6,8 @@ import { BG } from "@/lib/i18n";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Fix: Cast session.user to any to access the custom id property added in next-auth callbacks
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parent = await prisma.user.findUnique({
     where: { id: (session.user as any).id },
@@ -18,7 +19,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Fix: Cast session.user to any to access the custom id property added in next-auth callbacks
+  if (!(session?.user as any)?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { nickname, age, ageBracket } = await req.json();
 
