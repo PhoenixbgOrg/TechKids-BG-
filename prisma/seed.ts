@@ -1,251 +1,215 @@
-// Use a namespace import to resolve "no exported member" error when the Prisma client is not yet generated.
-import * as Prisma from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
-// Extract PrismaClient from the namespace using type casting to avoid compilation errors.
-const { PrismaClient } = Prisma as any;
+import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
 
+// Data from original tier files
+const TIER1_QUESTIONS = [
+  {
+    text: "Защо при монтаж на LGA процесор не трябва да се докосват контактните повърхности с пръсти?",
+    options: ["Мазнината от кожата оксидира златното покритие и влошава проводимостта.", "Пръстите могат да прехвърлят статично електричество и да огънат фините пинове.", "Влагата от ръцете създава микроскопични къси съединения при старт."],
+    correct: 2,
+    explanation: "Мазнината пречи на контакта, а ESD убива веригите.",
+    fact: "Чистотата е здраве за хардуера."
+  },
+  {
+    text: "Кой компонент съхранява BIOS/UEFI настройките, когато компютърът е изключен от тока?",
+    options: ["Батерията CR2032 захранва CMOS чипа с енергонезависима памет.", "Настройките се записват директно в кеш паметта на процесора.", "Кондензаторите на дънната платка задържат заряд за данните."],
+    correct: 0,
+    explanation: "CMOS паметта се нуждае от малко напрежение, за да помни часа и настройките.",
+    fact: "Ако компютърът ти губи времето, смени батерията на дъното."
+  },
+  {
+    text: "Каква е основната разлика между HDD и SSD?",
+    options: ["SSD няма движещи се части и използва флаш памет за съхранение.", "HDD е по-бърз при четене, защото магнитният диск се върти постоянно.", "SSD устройствата са съвместими само с лаптопи и мобилни телефони."],
+    correct: 0,
+    explanation: "Липсата на механика прави SSD-тата стотици пъти по-бързи и устойчиви на удари.",
+    fact: "Времето за достъп при SSD е близо до нулата."
+  },
+  {
+    text: "За какво служи термопастата?",
+    options: ["Запълва микроскопичните дупки и неравности между процесора и охладителя.", "Служи като лепило, за да държи охладителя здраво закрепен за цокъла.", "Охлажда процесора директно чрез химическа ендотермична реакция."],
+    correct: 0,
+    explanation: "Въздухът е лош проводник. Пастата пренася топлината от метала към метала.",
+    fact: "Твърде много паста е почти толкова лошо, колкото твърде малко."
+  },
+  {
+    text: "Какво означава съкращението GPU?",
+    options: ["Graphics Processing Unit", "General Power Utility", "Global Processing Unit"],
+    correct: 0,
+    explanation: "GPU е специализиран процесор за обработка на графика и паралелни изчисления.",
+    fact: "Първият GPU в света е GeForce 256 на NVIDIA."
+  },
+  {
+    text: "Какво е 'Pixel'?",
+    options: ["Най-малката точка от цифровото изображение на екрана.", "Специален вид процесор за мобилни телефони.", "Мерна единица за скорост на интернет връзката."],
+    correct: 0,
+    explanation: "Думата идва от 'Picture Element'. Милиони пиксели образуват картината.",
+    fact: "4K резолюцията съдържа над 8 милиона пиксела."
+  }
+];
+
+const TIER2_QUESTIONS = [
+  {
+    text: "При DDR5, защо е по-добре да използваш 2 плочки RAM вместо 4 при високи честоти?",
+    options: ["Натоварва контролера (IMC) и влошава сигналната интегритетност.", "Защото две плочки консумират по-малко ток и греят по-малко.", "Защото четири плочки физически не се събират под охладителя."],
+    correct: 0,
+    explanation: "1DPC (1 Dimm Per Channel) е стандартът за стабилен овърклок.",
+    fact: "Повечето рекорди за RAM се правят с една плочка на дъно с два слота."
+  },
+  {
+    text: "Каква е ролята на VRM (Voltage Regulator Module) върху дънната платка?",
+    options: ["Преобразува 12V от захранването в прецизно ниско напрежение за процесора.", "Управлява адресируемите RGB светлини на вентилаторите.", "Осигурява директна връзка между видеокартата и монитора."],
+    correct: 0,
+    explanation: "Процесорите работят на около 1.2V-1.4V. VRM фазите трябва да са стабилни, за да няма сривове.",
+    fact: "Прегрял VRM е най-честата причина за тротлинг (сваляне на честота)."
+  },
+  {
+    text: "Защо L3 кешът е толкова важен за производителността в игрите?",
+    options: ["Намалява латентността, като държи важни данни близо до ядрата.", "Увеличава резолюцията на текстурите в играта автоматично.", "Позволява на хард диска да зарежда нивата по-бързо."],
+    correct: 0,
+    explanation: "Кешът е свръхбърза памет вътре в чипа. Повече кеш = по-гладък геймплей (FPS).",
+    fact: "Процесорите AMD X3D използват 3D V-Cache за огромно предимство в игрите."
+  },
+  {
+    text: "Какво е DLSS (Deep Learning Super Sampling)?",
+    options: ["AI технология, която рендира на ниска резолюция и увеличава качеството чрез изкуствен интелект.", "Нов вид монитор с по-висока честота на опресняване.", "Технология за подобряване на качеството на звука в слушалките."],
+    correct: 0,
+    explanation: "Това позволява много повече FPS без видима загуба на качество.",
+    fact: "DLSS използва Tensor ядрата в RTX картите."
+  }
+];
+
+const TIER3_QUESTIONS = [
+  {
+    text: "Какво е 'ECC Multi-bit Error' и защо е фатален за сървъра?",
+    options: ["Повредени са повече битове, отколкото алгоритъмът може да поправи.", "Когато RAM паметта прегрее над 100 градуса и стопи слота.", "Когато захранването прекъсне за части от секундата."],
+    correct: 0,
+    explanation: "ECC поправя 1 бит грешка, но при 2+ бита системата прави Panic Stop, за да не корумпира базата данни.",
+    fact: "Сървърите използват регистрова памет (RDIMM) за по-голяма стабилност."
+  },
+  {
+    text: "Защо във водните охлаждания не се смесват алуминиеви и медни блокове?",
+    options: ["Заради галванична корозия, която разяжда по-слабия метал.", "Защото течността става твърде гъста и запушва помпата.", "Защото алуминият е по-тежък и огъва дънната платка."],
+    correct: 0,
+    explanation: "Двата метала в една течност образуват батерия. По-слабият метал започва да се разпада.",
+    fact: "Винаги проверявайте материалите на фитингите и радиаторите!"
+  },
+  {
+    text: "Каква е целта на RAID 0 конфигурацията при дисковете?",
+    options: ["Удвоява скоростта чрез разпределяне на данните, но без защита.", "Осигурява пълно резервно копие на данните при повреда.", "Намалява значително шума от въртенето на дисковете."],
+    correct: 0,
+    explanation: "RAID 0 пише на два диска едновременно. Ако единият изгори - всичко изчезва.",
+    fact: "Никога не дръж важни файлове на RAID 0 без външен архив!"
+  },
+  {
+    text: "Какво е 'Docker'?",
+    options: ["Платформа за стартиране на приложения в изолирани контейнери.", "Популярна марка панталони за програмисти.", "Пристанище за свързване на кораби с интернет."],
+    correct: 0,
+    explanation: "Контейнерите са по-леки от виртуалните машини и стартират за секунди.",
+    fact: "Docker промени начина, по който се разработва софтуер в целия свят."
+  }
+];
+
+const TIER0_QUESTIONS = [
+  {
+    text: "При транзистори под 2nm, как 'Quantum Tunneling' влияе на логическата нула?",
+    options: ["Електроните преминават през бариерата въпреки липсата на напрежение.", "Процесорът спира да консумира ток и влиза в хибернация.", "Транзисторът се изпарява моментално от топлината."],
+    correct: 0,
+    explanation: "Електроните са толкова малки, че преминават през стените на транзистора, което прави 'изключването' му невъзможно.",
+    fact: "Това е лимитът на модерната физика на чиповете."
+  },
+  {
+    text: "При Von Neumann архитектурата, какво представлява 'Bottleneck' ефектът?",
+    options: ["Ограничението на скоростта на трансфер между паметта и процесора.", "Когато захранващият кабел е твърде тънък за мощността.", "Когато охладителят е монтиран наобратно и спира въздуха."],
+    correct: 0,
+    explanation: "Процесорът чака данните от паметта твърде дълго, което губи изчислителни цикли.",
+    fact: "Затова кеш паметта (L1, L2, L3) е толкова критична."
+  }
+];
+
 async function main() {
-  const passwordHash = await bcrypt.hash('12345678', 10);
-
-  // 1. Admin & Parent
-  await prisma.user.upsert({
-    where: { email: 'admin@techkids.bg' },
-    update: {},
-    create: { email: 'admin@techkids.bg', fullName: 'Админ ТехКидс', passwordHash, role: 'ADMIN' }
-  });
-
-  const parent = await prisma.user.upsert({
-    where: { email: 'parent@test.com' },
-    update: {},
-    create: {
-      email: 'parent@test.com',
-      fullName: 'Симеон Петров',
-      passwordHash,
-      role: 'USER',
-      children: {
-        create: [
-          { nickname: 'CyberHero', age: 11, ageBracket: '10-12' },
-          { nickname: 'TechQueen', age: 14, ageBracket: '13-15' }
-        ]
-      }
-    }
-  });
-
-  // 2. Comprehensive Curriculum (Level 1-10)
+  // 1. Create Learning Modules
   const curriculum = [
     {
       order: 1,
       slug: 'intro-hardware',
-      titleBG: 'Основи на компютърния хардуер',
-      titleEN: 'Introduction to Computer Hardware',
-      introBG: 'Добре дошли в света на хардуера! Тук ще разберем как отделните части работят заедно.',
-      summaryBG: 'Компютърът е система от взаимосвързани компоненти (CPU, RAM, GPU), захранвани от PSU.',
-      summaryEN: 'A computer is a system of interconnected components powered by the PSU.',
+      titleBG: 'Основи на хардуера',
+      titleEN: 'Hardware Basics',
+      summaryBG: 'Какво има в кутията? CPU, RAM, GPU и други зверове.',
+      summaryEN: 'What is inside the box? CPU, RAM, GPU and other beasts.',
       contentSections: [
         { type: 'text', content: 'Всеки съвременен компютър се състои от няколко ключови части. Процесорът (CPU) е "мозъкът", RAM е "краткосрочната памет", а SSD/HDD е "дългосрочната памет".' },
         { type: 'info', content: 'GPU (видеокартата) отговаря за всичко, което виждаш на екрана, особено в игрите.' }
       ],
-      keyTermsEN: [
-        { term: 'Hardware', def: 'The physical parts of a computer system.' },
-        { term: 'Component', def: 'A single part that makes up a larger system.' }
-      ],
-      mistakesBG: ['Мислиш, че мониторът е компютърът.'],
-      sources: [
-        { title: 'Intel Computing Basics', url: 'https://www.intel.com/content/www/us/en/gaming/resources/how-computers-work.html' },
-        { title: 'Computer Hope: Hardware', url: 'https://www.computerhope.com/jargon/h/hardware.htm' }
-      ]
+      keyTermsEN: [{ term: 'Hardware', def: 'Physical parts' }],
+      mistakesBG: ['Мониторът не е компютърът!'],
+      sources: [{ title: 'Intel Basics', url: 'https://intel.com' }]
     },
     {
       order: 2,
       slug: 'cpu-architecture',
-      titleBG: 'Архитектура на процесора (CPU)',
-      titleEN: 'CPU Architecture & Sockets',
-      introBG: 'Процесорът изпълнява милиарди инструкции всяка секунда.',
-      summaryBG: 'Ядрата и тактовата честота определят колко бързо се обработва информацията.',
-      summaryEN: 'Cores and clock speed determine how fast information is processed.',
+      titleBG: 'Процесори (CPU)',
+      titleEN: 'CPU Architecture',
+      summaryBG: 'Ядра, нишки и гигахерци. Как мисли компютърът.',
+      summaryEN: 'Cores, threads and gigahertz.',
       contentSections: [
-        { type: 'text', content: 'Процесорите използват сокети (sockets) за връзка с дънната платка. Intel използва LGA, докато по-старите AMD използваха PGA.' },
-        { type: 'warning', content: 'Никога не натискай процесора със сила в сокета. Пиновете са изключително деликатни!' }
+        { type: 'text', content: 'Процесорите използват сокети за връзка с дънната платка.' },
+        { type: 'warning', content: 'Пиновете са много чупливи!' }
       ],
-      keyTermsEN: [
-        { term: 'Socket', def: 'The connector on the motherboard that holds the CPU.' },
-        { term: 'Clock Speed', def: 'How many cycles a CPU performs per second, measured in GHz.' }
-      ],
-      mistakesBG: ['Опит за поставяне на Intel процесор в AMD дънна платка.'],
-      sources: [
-        { title: 'Intel ARK Reference', url: 'https://ark.intel.com' },
-        { title: 'AMD Processors Guide', url: 'https://www.amd.com/en/products/processors' }
-      ]
+      keyTermsEN: [{ term: 'Socket', def: 'CPU connector' }],
+      mistakesBG: ['Насилване на процесора в сокета.'],
+      sources: [{ title: 'AMD Docs', url: 'https://amd.com' }]
     },
     {
       order: 3,
-      slug: 'gpu-power',
-      titleBG: 'Видеокарти (GPU): Силата на графиката',
-      titleEN: 'GPU: The Power of Graphics',
-      introBG: 'Видеокартата не е само за игри; тя обработва сложни математически изчисления паралелно.',
-      summaryBG: 'VRAM и архитектурата са ключови за производителността при висока резолюция.',
-      summaryEN: 'VRAM and architecture are key for performance at high resolutions.',
+      slug: 'exam-rookie',
+      titleBG: 'ИЗПИТ: AORUS Rookie',
+      titleEN: 'Exam: Rookie Tier',
+      summaryBG: 'Тест за начинаещи. Докажи, че не си noob.',
+      summaryEN: 'Beginner test.',
       contentSections: [
-        { type: 'text', content: 'NVIDIA и AMD са двата основни производителя на чипове. Ray Tracing е технология, която симулира реалното поведение на светлината.' }
+        { type: 'text', content: 'Това е първият голям тест. Включва въпроси от обща култура за хардуера.' }
       ],
-      keyTermsEN: [
-        { term: 'VRAM', def: 'Video Random Access Memory, used by the GPU to store textures.' },
-        { term: 'Resolution', def: 'The number of pixels displayed on a screen.' }
-      ],
-      mistakesBG: ['Купуване на карта само заради количеството памет, без да се гледа чипът.'],
-      sources: [
-        { title: 'NVIDIA Ray Tracing Explainer', url: 'https://www.nvidia.com/en-us/geforce/news/rtx-ray-tracing-explained/' },
-        { title: 'AMD Radeon Graphics', url: 'https://www.amd.com/en/graphics/radeon-rx-graphics' }
-      ]
+      keyTermsEN: [],
+      mistakesBG: [],
+      sources: []
     },
     {
       order: 4,
-      slug: 'ram-speed',
-      titleBG: 'RAM Памет: Бързата работна площ',
-      titleEN: 'RAM: The Fast Workspace',
-      introBG: 'RAM е мястото, където компютърът държи активните програми.',
-      summaryBG: 'Dual-channel режимът удвоява пропускателната способност на паметта.',
-      summaryEN: 'Dual-channel mode doubles the memory bandwidth.',
-      contentSections: [
-        { type: 'text', content: 'DDR4 и DDR5 са текущите стандарти. Скоростта се измерва в MHz или MT/s.' }
-      ],
-      keyTermsEN: [
-        { term: 'Bandwidth', def: 'The maximum rate of data transfer.' },
-        { term: 'Latency', def: 'The delay before a transfer of data begins.' }
-      ],
-      mistakesBG: ['Поставяне на плочките памет в грешни слотове за dual-channel.'],
-      sources: [
-        { title: 'Crucial: What is RAM?', url: 'https://www.crucial.com/articles/about-memory-storage/what-is-ram' },
-        { title: 'Kingston: DDR4 vs DDR5', url: 'https://www.kingston.com/en/blog/pc-performance/ddr5-vs-ddr4' }
-      ]
+      slug: 'exam-elite',
+      titleBG: 'ИЗПИТ: AORUS Elite',
+      titleEN: 'Exam: Elite Tier',
+      summaryBG: 'Сериозни въпроси за овърклок и архитектура.',
+      summaryEN: 'Overclocking and architecture.',
+      contentSections: [{ type: 'text', content: 'Тук нещата стават сериозни. Внимавай с волтажите.' }],
+      keyTermsEN: [],
+      mistakesBG: [],
+      sources: []
     },
     {
       order: 5,
-      slug: 'storage-speed',
-      titleBG: 'Съхранение: HDD vs SSD',
-      titleEN: 'Storage: HDD vs SSD Speed',
-      introBG: 'Къде отиват твоите файлове, когато изключиш компютъра?',
-      summaryBG: 'NVMe SSD дисковете са многократно по-бързи от традиционните HDD.',
-      summaryEN: 'NVMe SSDs are many times faster than traditional HDDs.',
-      contentSections: [
-        { type: 'text', content: 'HDD използват въртящи се дискове, докато SSD използват флаш памет (NAND). NVMe е протокол, който използва PCIe шината.' }
-      ],
-      keyTermsEN: [
-        { term: 'SSD', def: 'Solid State Drive, uses flash memory for fast storage.' },
-        { term: 'NVMe', def: 'Non-Volatile Memory Express, a protocol for fast SSDs.' }
-      ],
-      mistakesBG: ['Използване на HDD за системно устройство в модерен компютър.'],
-      sources: [
-        { title: 'Samsung SSD Guides', url: 'https://www.samsung.com/semiconductor/minisite/ssd/support/faqs/' },
-        { title: 'Western Digital: SSD vs HDD', url: 'https://www.westerndigital.com/solutions/ssd-vs-hdd' }
-      ]
+      slug: 'exam-xtreme',
+      titleBG: 'ИЗПИТ: AORUS Xtreme',
+      titleEN: 'Exam: Xtreme Tier',
+      summaryBG: 'Сървъри, мрежи и екстремен хардуер.',
+      summaryEN: 'Servers and extreme hardware.',
+      contentSections: [{ type: 'text', content: 'Само за истински експерти.' }],
+      keyTermsEN: [],
+      mistakesBG: [],
+      sources: []
     },
     {
       order: 6,
-      slug: 'motherboard-heart',
-      titleBG: 'Дънни платки: Основата на всичко',
-      titleEN: 'Motherboards: The Foundation',
-      introBG: 'Дънната платка свързва всички компоненти и разпределя енергията.',
-      summaryBG: 'Чипсетът и VRM модулите определят възможностите на системата.',
-      summaryEN: 'The chipset and VRM modules determine the systems capabilities.',
-      contentSections: [
-        { type: 'text', content: 'Форм фактори като ATX, Micro-ATX и ITX определят размера на кутията, от която се нуждаеш.' }
-      ],
-      keyTermsEN: [
-        { term: 'Chipset', def: 'The heart of the motherboard that controls component communication.' },
-        { term: 'Form Factor', def: 'The physical size and layout of the motherboard.' }
-      ],
-      mistakesBG: ['Купуване на ITX платка за огромна кутия без нужда.'],
-      sources: [
-        { title: 'ASUS Motherboard Basics', url: 'https://www.asus.com/support/FAQ/1043007/' },
-        { title: 'Gigabyte: Motherboard Guides', url: 'https://www.gigabyte.com/Support/FAQ' }
-      ]
-    },
-    {
-      order: 7,
-      slug: 'psu-safety',
-      titleBG: 'Захранване (PSU): Енергия и безопасност',
-      titleEN: 'PSU: Power and Safety',
-      introBG: 'Захранващият блок преобразува AC в DC за компонентите.',
-      summaryBG: 'Ефективността 80 Plus не гарантира качество, но е важен показател.',
-      summaryEN: '80 Plus efficiency does not guarantee quality, but it is an important indicator.',
-      contentSections: [
-        { type: 'warning', content: 'Никога не отваряй захранващия блок. Вътре има кондензатори с опасно високо напрежение!' }
-      ],
-      keyTermsEN: [
-        { term: 'Efficiency', def: 'How much energy is converted vs lost as heat.' },
-        { term: 'Wattage', def: 'The total power capacity of the PSU.' }
-      ],
-      mistakesBG: ['Спестяване от качествено захранване за сметка на други части.'],
-      sources: [
-        { title: 'Corsair PSU Guide', url: 'https://www.corsair.com/us/en/explorer/diy-builder/power-supply-units/' },
-        { title: 'EVGA: Choosing a PSU', url: 'https://www.evga.com/support/faq/?f=59695' }
-      ]
-    },
-    {
-      order: 8,
-      slug: 'cooling-theory',
-      titleBG: 'Теория на охлаждането',
-      titleEN: 'Cooling Theory & Airflow',
-      introBG: 'Как пренасяме топлината далеч от важните части?',
-      summaryBG: 'Въздушните охладители и AIO водните системи използват подобни принципи на топлообмен.',
-      summaryEN: 'Air coolers and AIO water systems use similar heat exchange principles.',
-      contentSections: [
-        { type: 'text', content: 'Термо пастата запълва микроскопичните дупки между процесора и охладителя.' }
-      ],
-      keyTermsEN: [
-        { term: 'Heatsink', def: 'A metal component that dissipates heat.' },
-        { term: 'AIO', def: 'All-In-One liquid cooler.' }
-      ],
-      mistakesBG: ['Забравяне на предпазната лепенка под охладителя.'],
-      sources: [
-        { title: 'Noctua Cooling Manuals', url: 'https://noctua.at/en/installation-manuals' },
-        { title: 'Arctic: Thermal Interface Basics', url: 'https://support.arctic.de/thermal-paste' }
-      ]
-    },
-    {
-      order: 9,
-      slug: 'case-airflow',
-      titleBG: 'Кутии и Въздушен поток',
-      titleEN: 'Cases & Airflow Optimization',
-      introBG: 'Въздушният поток определя колко дълго ще живее твоят хардуер.',
-      summaryBG: 'Положителното и отрицателното налягане влияят на прахта в кутията.',
-      summaryEN: 'Positive and negative pressure affect dust buildup in the case.',
-      contentSections: [
-        { type: 'info', content: 'Вентилаторите имат предна страна (всмукване) и задна страна с рамка (изхвърляне).' }
-      ],
-      keyTermsEN: [
-        { term: 'Airflow', def: 'The movement of air through the computer case.' },
-        { term: 'Dust Filter', def: 'A mesh screen that prevents dust from entering.' }
-      ],
-      mistakesBG: ['Всички вентилатори да духат навътре в кутията.'],
-      sources: [
-        { title: 'Cooler Master Airflow Guide', url: 'https://www.coolermaster.com/en-global/guides/' },
-        { title: 'Lian Li: PC Case Optimization', url: 'https://lian-li.com/product-category/cases/' }
-      ]
-    },
-    {
-      order: 10,
-      slug: 'diagnostics-basics',
-      titleBG: 'Основи на хардуерната диагностика',
-      titleEN: 'Hardware Diagnostics Basics',
-      introBG: 'Компютърът не пали? Не се плаши, има логичен път за решаване.',
-      summaryBG: 'POST е процесът, при който компютърът се проверява при стартиране.',
-      summaryEN: 'POST is the process where the computer checks itself at startup.',
-      contentSections: [
-        { type: 'text', content: 'DEBUG LED светлините на дънната платка са най-добрият ти приятел при проблем.' }
-      ],
-      keyTermsEN: [
-        { term: 'POST', def: 'Power-On Self-Test.' },
-        { term: 'BIOS', def: 'Basic Input/Output System.' }
-      ],
-      mistakesBG: ['Паника преди да сте проверили дали кабелът е включен.'],
-      sources: [
-        { title: 'MSI Motherboard Troubleshooting', url: 'https://www.msi.com/support/technical_details/MB_Boot_No_Display' },
-        { title: 'TechSpot: Hardware Debugging', url: 'https://www.techspot.com/guides/2325-pc-troubleshooting/' }
-      ]
+      slug: 'exam-singularity',
+      titleBG: 'НИВО: СИНГУЛЯРНОСТ',
+      titleEN: 'Tier: Singularity',
+      summaryBG: 'Квантова физика и лимита на силиция.',
+      summaryEN: 'Quantum physics.',
+      contentSections: [{ type: 'warning', content: 'Опасност от прегряване на мозъка.' }],
+      keyTermsEN: [],
+      mistakesBG: [],
+      sources: []
     }
   ];
 
@@ -254,33 +218,56 @@ async function main() {
       where: { slug: l.slug },
       update: {},
       create: {
-        ...l,
-        contentSections: JSON.stringify(l.contentSections),
-        keyTermsEN: JSON.stringify(l.keyTermsEN),
-        mistakesBG: JSON.stringify(l.mistakesBG),
-        sources: JSON.stringify(l.sources),
-        published: true
+        order: l.order,
+        slug: l.slug,
+        titleBG: l.titleBG,
+        titleEN: l.titleEN,
+        summaryBG: l.summaryBG,
+        summaryEN: l.summaryEN,
+        contentSections: l.contentSections as any,
+        keyTermsEN: l.keyTermsEN as any,
+        mistakesBG: l.mistakesBG as any,
+        sources: l.sources as any,
       }
     });
 
-    // 20 Questions per lesson = 200 total
-    const questions = [];
-    for (let i = 1; i <= 20; i++) {
-      const type = i % 4 === 0 ? 'scenario' : (i % 3 === 0 ? 'multi' : 'single');
-      questions.push({
-        lessonId: lesson.id,
-        textBG: `Сценарий за ${lesson.titleBG} #${i}: Ако имаш проблем с температурите, какво е най-добре да направиш?`,
-        type,
-        optionsBG: JSON.stringify(['Проверка на вентилаторите', 'Смяна на термо паста', 'Добавяне на още RAM', 'Рестарт на BIOS']),
-        correctAnswer: type === 'multi' ? JSON.stringify([0, 1]) : JSON.stringify(0),
-        explanationBG: `Защото температурите зависят от охлаждането (вентилатори и паста), а не от RAM.`,
-        explanationSrc: JSON.parse(lesson.sources)[0].url
+    // Clean existing questions to prevent duplicates on re-seed
+    await prisma.question.deleteMany({ where: { lessonId: lesson.id } });
+
+    let questionsToAdd: any[] = [];
+
+    if (l.slug === 'exam-rookie') questionsToAdd = TIER1_QUESTIONS;
+    else if (l.slug === 'exam-elite') questionsToAdd = TIER2_QUESTIONS;
+    else if (l.slug === 'exam-xtreme') questionsToAdd = TIER3_QUESTIONS;
+    else if (l.slug === 'exam-singularity') questionsToAdd = TIER0_QUESTIONS;
+    else {
+      // Add generic questions for standard lessons
+      questionsToAdd = [
+        {
+          text: `Въпрос за ${l.titleBG}: Какво е най-важно?`,
+          options: ["Да свети RGB", "Да работи стабилно", "Да е скъпо"],
+          correct: 1,
+          explanation: "Стабилността е преди всичко.",
+          fact: "RGB не вдига FPS."
+        }
+      ];
+    }
+
+    for (const q of questionsToAdd) {
+      await prisma.question.create({
+        data: {
+          lessonId: lesson.id,
+          textBG: q.text,
+          optionsBG: q.options,
+          correctIdx: q.correct,
+          explanationBG: q.explanation,
+          factBG: q.fact || null
+        }
       });
     }
-    await prisma.question.createMany({ data: questions });
   }
 
-  console.log('Seed completed successfully. 10 lessons and 200 questions added.');
+  console.log('Seed completed.');
 }
 
-main().finally(() => prisma.$disconnect());
+main().catch(e => console.error(e)).finally(() => prisma.$disconnect());

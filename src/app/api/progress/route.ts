@@ -1,29 +1,36 @@
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
-  const { childId, lessonId, score, passed } = await req.json();
+  const cookieStore = await cookies();
+  const kidId = cookieStore.get('kidId')?.value;
+
+  if (!kidId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { lessonId, score, passed } = await req.json();
 
   const existing = await prisma.progress.findUnique({
     where: {
-      childId_lessonId: { childId, lessonId }
+      kidId_lessonId: { kidId, lessonId }
     }
   });
 
   if (existing) {
-    // Only update if score is better or just to increment attempts
     await prisma.progress.update({
       where: { id: existing.id },
       data: {
         score: Math.max(existing.score, score),
         passed: existing.passed || passed,
-        attempts: { increment: 1 }
+        attempts: { increment: 1 },
+        lastAttempt: new Date()
       }
     });
   } else {
     await prisma.progress.create({
       data: {
-        childId,
+        kidId,
         lessonId,
         score,
         passed,

@@ -1,58 +1,64 @@
+
 'use client';
-import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { BG } from '@/lib/i18n';
-import { Lock, CheckCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, ArrowRight, AlertTriangle, XCircle, Lightbulb } from 'lucide-react';
 
-type Props = {
-  params: { lessonId: string };
-};
-
-export default function QuizPage({ params }: Props) {
+export default function QuizPage({ params }: { params: { lessonId: string } }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const childId = searchParams.get('childId');
-  
-  const [inviteCode, setInviteCode] = useState('');
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [inviteError, setInviteError] = useState(false);
-
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
+  
+  // State for current question interactions
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  
   const [finished, setFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  // In a real app, the invite code would come from the API/Lesson data
-  const VALID_CODE = "TECH2024";
+  
+  // Ref for auto-scrolling to feedback
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!childId) return;
-    fetchQuestions();
-  }, [childId]);
+    fetch(`/api/quiz?lessonId=${params.lessonId}`)
+      .then(res => res.json())
+      .then(data => {
+        setQuestions(data);
+        setLoading(false);
+      });
+  }, [params.lessonId]);
 
-  async function fetchQuestions() {
-    try {
-      const res = await fetch(`/api/quiz?lessonId=${params.lessonId}`);
-      const data = await res.json();
-      setQuestions(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Handle option selection
+  const handleOptionClick = (idx: number) => {
+    if (isAnswered) return; // Prevent changing answer
 
-  function handleUnlock(e: React.FormEvent) {
-    e.preventDefault();
-    if (inviteCode.toUpperCase() === VALID_CODE) {
-      setIsUnlocked(true);
-      setInviteError(false);
+    setSelectedOption(idx);
+    setIsAnswered(true);
+    setAnswers(prev => ({ ...prev, [currentIdx]: idx }));
+    
+    // Auto scroll to feedback on mobile with a slight delay to allow render
+    setTimeout(() => {
+        if (feedbackRef.current) {
+            const yOffset = -20; 
+            const y = feedbackRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+            window.scrollTo({top: y, behavior: 'smooth'});
+        }
+    }, 150);
+  };
+
+  const handleNext = () => {
+    if (currentIdx < questions.length - 1) {
+      setCurrentIdx(prev => prev + 1);
+      setIsAnswered(false);
+      setSelectedOption(null);
+      window.scrollTo(0, 0);
     } else {
-      setInviteError(true);
+      submitQuiz();
     }
-  }
+  };
 
   async function submitQuiz() {
     let correctCount = 0;
@@ -68,7 +74,6 @@ export default function QuizPage({ params }: Props) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        childId,
         lessonId: params.lessonId,
         score: finalScore,
         passed: finalScore >= 80
@@ -76,76 +81,34 @@ export default function QuizPage({ params }: Props) {
     });
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400 font-bold animate-pulse">Зареждане на теста...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div className="text-orange-500 font-mono animate-pulse uppercase tracking-widest font-bold">ЗАРЕЖДАНЕ...</div>
+    </div>
+  );
 
-  // STEP 1: INVITE CODE
-  if (!isUnlocked) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-xl w-full max-w-md border border-slate-100 text-center">
-          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
-            <Lock className="w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-black mb-2 text-slate-800">{BG.quiz_invite_title}</h2>
-          <p className="text-slate-500 mb-8 text-sm leading-relaxed">{BG.quiz_invite_desc}</p>
-          
-          <form onSubmit={handleUnlock} className="space-y-4">
-            <div className="text-left">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">
-                {BG.quiz_invite_label}
-              </label>
-              <input 
-                type="text"
-                value={inviteCode}
-                onChange={e => setInviteCode(e.target.value)}
-                className={`w-full p-4 bg-slate-50 border-2 rounded-2xl text-center text-xl font-mono tracking-[0.5em] transition-all outline-none ${
-                  inviteError ? 'border-red-200 bg-red-50 text-red-600' : 'border-slate-100 focus:border-blue-500'
-                }`}
-                placeholder="••••••••"
-              />
-              {inviteError && <p className="text-red-500 text-xs font-bold mt-2 text-center">{BG.quiz_invite_error}</p>}
-            </div>
-            <button 
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-100 transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-              {BG.quiz_invite_btn} <ArrowRight className="w-5 h-5" />
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // STEP 2: FINISHED SCREEN
   if (finished) {
     const passed = score >= 80;
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-xl w-full max-w-md text-center">
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${passed ? 'bg-green-50 text-green-500' : 'bg-orange-50 text-orange-500'}`}>
-            <CheckCircle className="w-12 h-12" />
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 md:p-6">
+        <div className="bg-slate-900 border border-slate-800 p-8 md:p-12 max-w-lg w-full text-center rounded-3xl shadow-2xl">
+          <div className={`w-24 h-24 mx-auto mb-8 flex items-center justify-center rounded-full border-4 shadow-[0_0_30px_rgba(0,0,0,0.3)] ${passed ? 'border-green-500 text-green-500 bg-green-900/10' : 'border-red-500 text-red-500 bg-red-900/10'}`}>
+             {passed ? <CheckCircle size={48} /> : <AlertTriangle size={48} />}
           </div>
-          <h2 className="text-2xl font-black mb-2 text-slate-800">{BG.quiz_result_title}</h2>
-          <div className={`text-6xl font-black mb-6 ${passed ? 'text-green-500' : 'text-orange-500'}`}>
-            {score}%
+          <h2 className={`text-4xl md:text-5xl font-black mb-4 italic uppercase tracking-tighter ${passed ? 'text-green-500' : 'text-red-500'}`}>
+            {passed ? BG.quiz_pass : BG.quiz_fail}
+          </h2>
+          <div className="text-white font-mono text-2xl mb-10 bg-slate-800 py-4 rounded-xl border border-slate-700">
+             РЕЗУЛТАТ: <span className={passed ? 'text-green-400' : 'text-red-400'}>{score}%</span>
           </div>
-          <p className="text-slate-500 mb-10 font-bold leading-relaxed px-4">
-            {passed ? BG.quiz_pass_msg : BG.quiz_fail_msg}
-          </p>
           
-          <div className="space-y-3">
-             <button 
-                onClick={() => window.location.reload()}
-                className="w-full py-4 bg-slate-100 text-slate-600 font-black rounded-2xl hover:bg-slate-200 transition-all"
-             >
-               {BG.quiz_btn_retry}
+          <div className="space-y-4">
+             <button onClick={() => window.location.reload()} className="w-full py-4 border-2 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 font-bold uppercase tracking-widest transition-all rounded-xl active:scale-95 text-lg">
+               {BG.quiz_retry}
              </button>
-             <button 
-                onClick={() => router.push(`/dashboard/child/${childId}`)}
-                className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
-             >
-               {BG.quiz_btn_back_dash}
+             <button onClick={() => router.push('/dashboard')} className="w-full py-5 bg-white text-black font-black uppercase tracking-widest hover:bg-slate-200 transition-all rounded-xl shadow-lg active:scale-95 text-lg">
+               {BG.quiz_back}
              </button>
           </div>
         </div>
@@ -153,72 +116,117 @@ export default function QuizPage({ params }: Props) {
     );
   }
 
-  // STEP 3: QUIZ ENGINE
   const currentQ = questions[currentIdx];
   const isLast = currentIdx === questions.length - 1;
+  const options = currentQ.optionsBG || [];
+  const correctIdx = currentQ.correctIdx;
+  const isCorrect = selectedOption === correctIdx;
 
   return (
-    <div className="min-h-screen bg-sky-50/50 p-4 md:p-12 flex flex-col items-center">
-       <div className="w-full max-w-2xl">
-         <div className="bg-white/50 backdrop-blur rounded-full h-3 mb-12 overflow-hidden border border-white">
-            <div 
-              className="bg-blue-500 h-full transition-all duration-700 ease-out"
-              style={{ width: `${((currentIdx) / questions.length) * 100}%` }}
-            />
+    <div className="min-h-screen bg-slate-950 flex flex-col p-4 pb-32">
+       <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col">
+         {/* Progress Bar */}
+         <div className="mb-6 mt-2">
+            <div className="flex justify-between items-end mb-2">
+                <span className="text-slate-400 font-black text-xs uppercase tracking-widest">{BG.quiz_question} {currentIdx + 1} / {questions.length}</span>
+                <span className="text-orange-500 font-mono text-xs font-bold">{Math.round(((currentIdx) / questions.length) * 100)}%</span>
+            </div>
+            <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+               <div className="h-full bg-gradient-to-r from-orange-600 to-red-600 transition-all duration-500 ease-out" style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }} />
+            </div>
          </div>
 
-         <div className="bg-white rounded-[2.5rem] p-8 md:p-14 shadow-xl border-b-[12px] border-slate-100">
-            <div className="flex justify-between items-center mb-10">
-              <span className="text-xs font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">
-                {BG.quiz_question_prefix} {currentIdx + 1} / {questions.length}
-              </span>
-            </div>
-            
-            <h2 className="text-2xl md:text-3xl font-black text-slate-800 mb-12 leading-tight">
+         {/* Question Card */}
+         <div className="bg-black border border-slate-800 p-6 md:p-10 mb-6 rounded-3xl relative shadow-xl flex-shrink-0">
+            <h2 className="text-xl md:text-3xl font-bold text-white leading-snug">
               {currentQ.textBG}
             </h2>
+         </div>
 
-            <div className="space-y-4">
-              {JSON.parse(currentQ.optionsBG).map((opt: string, i: number) => {
-                const isSelected = answers[currentIdx] === i;
+         {/* Options Grid */}
+         <div className="grid gap-3 md:gap-4 mb-8">
+              {options.map((opt: string, i: number) => {
+                let statusClass = "border-slate-800 bg-slate-900 text-slate-300"; // Default
+                
+                if (isAnswered) {
+                    if (i === correctIdx) {
+                        statusClass = "border-green-500 bg-green-900/20 text-green-400"; // Correct answer (always highlight)
+                    } else if (i === selectedOption) {
+                        statusClass = "border-red-500 bg-red-900/20 text-red-400"; // Wrong selected
+                    } else {
+                        statusClass = "border-slate-800 bg-slate-900/50 text-slate-600 opacity-50"; // Others dimmed
+                    }
+                } else {
+                    statusClass += " active:bg-slate-800 active:scale-[0.98]";
+                }
+
                 return (
                   <button
                     key={i}
-                    onClick={() => setAnswers(prev => ({ ...prev, [currentIdx]: i }))}
-                    className={`w-full text-left p-6 rounded-2xl font-bold border-2 transition-all transform active:scale-[0.98] ${
-                      isSelected 
-                        ? 'border-blue-500 bg-blue-50 text-blue-800 ring-4 ring-blue-500/10' 
-                        : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50 text-slate-600'
-                    }`}
+                    onClick={() => handleOptionClick(i)}
+                    disabled={isAnswered}
+                    className={`w-full text-left p-5 md:p-6 font-bold border-2 rounded-2xl transition-all duration-200 flex items-start gap-4 ${statusClass}`}
                   >
-                    <span className="inline-block w-8 text-blue-300">{String.fromCharCode(65 + i)}.</span>
-                    {opt}
+                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm flex-shrink-0 mt-0.5 ${
+                        isAnswered && i === correctIdx ? 'border-green-500 bg-green-500 text-black' :
+                        isAnswered && i === selectedOption ? 'border-red-500 bg-red-500 text-white' :
+                        'border-slate-600 text-slate-500'
+                    }`}>
+                        {isAnswered && i === correctIdx ? <CheckCircle size={18} /> : 
+                         isAnswered && i === selectedOption ? <XCircle size={18} /> : 
+                         <span className="font-mono">{String.fromCharCode(65 + i)}</span>}
+                    </div>
+                    <span className="text-base md:text-lg leading-snug">{opt}</span>
                   </button>
                 )
               })}
-            </div>
          </div>
 
-         <div className="mt-12 flex justify-end">
-            {isLast ? (
-               <button 
-                 onClick={submitQuiz}
-                 disabled={answers[currentIdx] === undefined}
-                 className="bg-green-500 text-white font-black py-5 px-10 rounded-2xl shadow-xl shadow-green-100 hover:bg-green-600 disabled:opacity-30 disabled:shadow-none transition-all active:scale-95 text-lg"
-               >
-                 {BG.quiz_btn_submit}
-               </button>
-            ) : (
-              <button 
-                 onClick={() => setCurrentIdx(prev => prev + 1)}
-                 disabled={answers[currentIdx] === undefined}
-                 className="bg-blue-600 text-white font-black py-5 px-10 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 disabled:opacity-30 disabled:shadow-none transition-all active:scale-95 text-lg flex items-center gap-2"
-               >
-                 {BG.quiz_btn_next} <ArrowRight className="w-5 h-5" />
-               </button>
-            )}
-         </div>
+         {/* Feedback Section (Visible only after answer) */}
+         {isAnswered && (
+             <div ref={feedbackRef} className={`rounded-3xl p-6 md:p-8 mb-24 border-l-8 animate-in slide-in-from-bottom-4 fade-in duration-300 ${isCorrect ? 'bg-green-900/10 border-green-500' : 'bg-red-900/10 border-red-500'}`}>
+                <div className="flex items-center gap-3 mb-4">
+                    {isCorrect ? <CheckCircle className="text-green-500" size={32} /> : <AlertTriangle className="text-red-500" size={32} />}
+                    <h3 className={`text-3xl font-black italic uppercase ${isCorrect ? 'text-green-500' : 'text-red-500'}`}>
+                        {isCorrect ? BG.quiz_correct_msg : BG.quiz_wrong_msg}
+                    </h3>
+                </div>
+                
+                <div className="space-y-5">
+                    <div className="text-slate-300">
+                        <span className="text-slate-500 text-xs font-black uppercase tracking-widest block mb-2">{BG.quiz_explanation}</span>
+                        <p className="text-lg leading-relaxed font-medium">{currentQ.explanationBG}</p>
+                    </div>
+                    
+                    {currentQ.factBG && (
+                        <div className="bg-slate-900/80 p-5 rounded-2xl border border-white/5 flex gap-4">
+                            <Lightbulb className="text-yellow-500 shrink-0" size={24} />
+                            <div>
+                                <span className="text-yellow-500/50 text-[10px] font-black uppercase tracking-widest block mb-1">{BG.quiz_fact}</span>
+                                <p className="text-slate-400 text-base italic leading-snug">"{currentQ.factBG}"</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+             </div>
+         )}
        </div>
+
+       {/* Sticky Bottom Action Button */}
+       {isAnswered && (
+         <div className="fixed bottom-0 left-0 w-full p-4 md:p-6 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent z-50">
+            <div className="max-w-3xl mx-auto">
+                <button 
+                    onClick={handleNext}
+                    className={`w-full py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 transition-all transform active:scale-[0.98] ${
+                        isLast ? 'bg-green-600 text-white shadow-green-900/40' : 'bg-orange-600 text-white shadow-orange-900/40'
+                    }`}
+                >
+                    {isLast ? BG.quiz_finish : BG.quiz_continue} <ArrowRight size={28} />
+                </button>
+            </div>
+         </div>
+       )}
     </div>
   );
 }

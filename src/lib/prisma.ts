@@ -1,10 +1,7 @@
-// Use a namespace import to resolve "no exported member" error when the Prisma client is not yet generated.
-import * as Prisma from '@prisma/client';
 
-// Extract PrismaClient from the namespace using type casting to avoid compilation errors.
-const { PrismaClient } = Prisma as any;
+import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as { prisma: any };
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ||

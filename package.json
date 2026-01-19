@@ -1,3 +1,4 @@
+
 {
   "name": "techkids-bg",
   "version": "1.0.0",
@@ -8,26 +9,25 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
-    "db:seed": "ts-node --compiler-options {\\\"module\\\":\\\"commonjs\\\"} prisma/seed.ts",
-    "check:ui-language": "node scripts/check-lang.js"
+    "db:seed": "ts-node --compiler-options {\"module\":\"commonjs\"} prisma/seed.ts",
+    "share": "npx cloudflared tunnel --url http://localhost:3000"
   },
   "dependencies": {
     "next": "14.1.0",
     "react": "^18",
     "react-dom": "^18",
-    "bcryptjs": "^2.4.3",
-    "next-auth": "^4.24.5",
     "prisma": "^5.10.0",
     "@prisma/client": "^5.10.0",
     "lucide-react": "^0.330.0",
     "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.1"
+    "tailwind-merge": "^2.2.1",
+    "js-cookie": "^3.0.5"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/bcryptjs": "^2.4.6",
+    "@types/js-cookie": "^3.0.6",
     "typescript": "^5",
     "tailwindcss": "^3.3.0",
     "autoprefixer": "^10.0.1",
