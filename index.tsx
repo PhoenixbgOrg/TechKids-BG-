@@ -2,137 +2,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
-  Activity, Terminal, 
-  ChevronRight, Skull, ShieldCheck, 
-  Info, Gavel, Euro,
-  Microscope, Gauge, Binary, Rocket, AlertTriangle, Zap, Crown, Ghost, Volume2, Heart, HeartCrack, User, FileWarning, Lock, CheckCircle2, Siren, ArrowRight, Mail
+  Activity, Terminal, ChevronRight, Skull, 
+  Info, Gavel, Microscope, Gauge, Zap, Crown, 
+  Heart, HeartCrack, User, Lock, Timer, AlertTriangle, RefreshCw, Trophy
 } from 'lucide-react';
 
+// Инклудиране на съществуващите въпроси от файловете
 import { TIER1_QUESTIONS } from './tier1';
 import { TIER2_QUESTIONS } from './tier2';
 import { TIER3_QUESTIONS } from './tier3';
 import { TIER0_QUESTIONS } from './tier0';
 
-// --- MATRIX BACKGROUND COMPONENT ---
-const MatrixBackground = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    const chars = 'БГДЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ0123456789<>[]{}*&^%$#!'.split('');
-    const fontSize = 16;
-    const columns = Math.floor(width / fontSize);
-    const drops: number[] = new Array(columns).fill(1);
-
-    let lastTime = 0;
-    const fps = 15; 
-    const interval = 1000 / fps;
-
-    const draw = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-      ctx.fillRect(0, 0, width, height);
-
-      ctx.font = `${fontSize}px monospace`;
-      
-      for (let i = 0; i < drops.length; i++) {
-        const text = chars[Math.floor(Math.random() * chars.length)];
-        const isHead = Math.random() > 0.98;
-        ctx.fillStyle = isHead ? '#fff' : '#0f0';
-        
-        if (!isHead) {
-           ctx.shadowBlur = 5;
-           ctx.shadowColor = '#0f0';
-        } else {
-           ctx.shadowBlur = 12;
-           ctx.shadowColor = '#fff';
-        }
-        
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-        ctx.shadowBlur = 0; 
-
-        if (drops[i] * fontSize > height && Math.random() > 0.98) {
-          drops[i] = 0;
-        }
-        drops[i]++;
-      }
-    };
-
-    let frame: number;
-    const animate = (timestamp: number) => {
-      const delta = timestamp - lastTime;
-      if (delta > interval) {
-        draw();
-        lastTime = timestamp - (delta % interval);
-      }
-      frame = requestAnimationFrame(animate);
-    };
-
-    const handleResize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    };
-
-    window.addEventListener('resize', handleResize);
-    frame = requestAnimationFrame(animate);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  return (
-    <canvas ref={canvasRef} className="fixed top-0 left-0 w-full h-full pointer-events-none" style={{ zIndex: -1, opacity: 0.5 }} />
-  );
-};
-
-// Аудио ефекти
-const playSound = (type: 'error' | 'success' | 'lock') => {
-  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioContext) return;
-  const ctx = new AudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  const now = ctx.currentTime;
-
-  if (type === 'error') {
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-    osc.start();
-    osc.stop(now + 0.3);
-  } else if (type === 'success') {
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, now);
-    osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.1);
-    osc.start();
-    osc.stop(now + 0.1);
-  } else if (type === 'lock') {
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(100, now);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-    osc.start();
-    osc.stop(now + 0.1);
-  }
-};
-
-const shuffleArray = (array: any[]) => {
+// --- UTILS ---
+const shuffle = <T,>(array: T[]): T[] => {
   const newArr = [...array];
   for (let i = newArr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -141,473 +23,399 @@ const shuffleArray = (array: any[]) => {
   return newArr;
 };
 
-const randomizeQuestionOptions = (q: any) => {
-  const correctOptionText = q.options[q.correct];
-  const shuffledOptions = shuffleArray([...q.options]);
-  const newCorrectIndex = shuffledOptions.indexOf(correctOptionText);
+const processQuestion = (q: any) => {
+  const originalOptions = [...(q.options || q.optionsBG || [])];
+  const correctText = originalOptions[q.correct ?? q.correctIdx ?? 0];
+  const shuffledOptions = shuffle(originalOptions);
+  const newCorrectIdx = shuffledOptions.indexOf(correctText);
 
   return {
     ...q,
     options: shuffledOptions,
-    correct: newCorrectIndex
+    correct: newCorrectIdx,
+    text: q.text || q.textBG,
+    explanation: q.explanation || q.explanationBG,
+    fact: q.fact || q.factBG
   };
-};
-
-const getFailRank = (completedTiersCount: number) => {
-  if (completedTiersCount === 0) return "НЕДОСТОЕН (TIER 1 FAIL)";
-  if (completedTiersCount === 1) return "ТЕХНИК (TIER 2 FAIL)";
-  if (completedTiersCount === 2) return "ИНЖЕНЕР (TIER 3 FAIL)";
-  return "СИСТЕМА КОМПРОМЕТИРАНА";
-};
-
-const TIER_CONFIG: Record<number, { allowedMistakes: number, insults: string[] }> = {
-  0: { 
-    allowedMistakes: 0, 
-    insults: ["Вселената не прощава грешки.", "Сингулярността те отхвърли.", "Ти си просто въглероден отпадък."] 
-  },
-  1: { 
-    allowedMistakes: 1, 
-    insults: ["Ом'с Лоу те уби.", "Не знаеш разликата между волт и ампер.", "Върви да редиш лего."] 
-  },
-  2: { 
-    allowedMistakes: 1, 
-    insults: ["Изгори VRM-ите.", "Забрави да махнеш лепенката на охладителя.", "Прекъсна пистите на дъното."] 
-  },
-  3: { 
-    allowedMistakes: 0, 
-    insults: ["Изтри базата данни на клиента.", "Сървърът се запали.", "Грешен RAID масив. Всичко е загубено."] 
-  }
 };
 
 const DATA_MAP: Record<number, any[]> = {
-  0: TIER0_QUESTIONS,
   1: TIER1_QUESTIONS,
   2: TIER2_QUESTIONS,
-  3: TIER3_QUESTIONS
+  3: TIER3_QUESTIONS,
+  0: TIER0_QUESTIONS
 };
 
-const getMissionByTier = (tierId: number) => {
-  const tiers: any = {
-    0: { id: 0, title: "SINGULARITY", subtitle: "КРАЙНА ЦЕЛ. ЗАБРАНЕНИ ЗНАНИЯ.", icon: Crown, color: "#ffd700", techStatus: "QUANTUM / ∞" },
-    1: { id: 1, title: "AORUS ROOKIE", subtitle: "Физика на хардуера.", icon: Microscope, color: "#00d2ff", techStatus: "4.8 GHz / AIR" },
-    2: { id: 2, title: "AORUS ELITE", subtitle: "Овърклок и архитектура.", icon: Gauge, color: "#ff6b00", techStatus: "6.2 GHz / H2O" },
-    3: { id: 3, title: "AORUS XTREME", subtitle: "Сървъри и инфраструктура.", icon: Gavel, color: "#ff0000", techStatus: "9.1 GHz / LN2" }
+const generateSessionPool = (tierId: number) => {
+  const rawData = DATA_MAP[tierId] || [];
+  let pool = rawData.map(processQuestion);
+  
+  // Ако няма достатъчно въпроси, запълваме с дубликати (за демото)
+  if (pool.length < 50 && pool.length > 0) {
+    const originalLength = pool.length;
+    for (let i = 0; pool.length < 50; i++) {
+      pool.push({ ...pool[i % originalLength], id: `extra-${tierId}-${i}` });
+    }
+  }
+  
+  return shuffle(pool).slice(0, 50);
+};
+
+// --- COMPONENT: MATRIX BACKGROUND ---
+const MatrixBackground = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    
+    let w = canvas.width = window.innerWidth;
+    let h = canvas.height = window.innerHeight;
+    
+    const chars = '0123456789ABCDEF'.split('');
+    const fontSize = 16;
+    const columns = Math.floor(w / fontSize);
+    const drops = new Array(columns).fill(1);
+    
+    let lastTime = 0;
+    const fps = 15; 
+    const interval = 1000 / fps;
+
+    const draw = (timestamp: number) => {
+      const delta = timestamp - lastTime;
+      if (delta > interval) {
+        lastTime = timestamp - (delta % interval);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+        ctx.fillRect(0, 0, w, h);
+        ctx.font = `${fontSize}px monospace`;
+        drops.forEach((y, i) => {
+          const text = chars[Math.floor(Math.random() * chars.length)];
+          ctx.fillStyle = Math.random() > 0.95 ? '#fff' : '#ff6b00';
+          ctx.fillText(text, i * fontSize, y * fontSize);
+          if (y * fontSize > h && Math.random() > 0.975) drops[i] = 0;
+          drops[i]++;
+        });
+      }
+      requestAnimationFrame(draw);
+    };
+
+    const handleResize = () => {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    };
+
+    window.addEventListener('resize', handleResize);
+    const animId = requestAnimationFrame(draw);
+    return () => {
+        window.removeEventListener('resize', handleResize);
+        cancelAnimationFrame(animId);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="fixed top-0 left-0 w-full h-full -z-10 opacity-30 pointer-events-none" />;
+};
+
+const AorusButton = ({ children, onClick, variant = 'primary', className = '' }: any) => {
+  const base = "relative px-8 py-4 font-orbitron font-black italic uppercase transition-all transform skew-x-[-12deg] group overflow-hidden shadow-2xl active:scale-95 cursor-pointer select-none border-none outline-none inline-flex items-center justify-center text-center";
+  const styles = {
+    primary: "bg-orange-600 text-white hover:bg-orange-500 shadow-orange-900/40",
+    secondary: "bg-white text-black hover:bg-slate-200 shadow-white/10",
+    danger: "bg-red-700 text-white hover:bg-red-600 shadow-red-900/40",
+    outline: "bg-white/5 border border-white/10 text-white hover:border-orange-500 hover:bg-orange-500/10"
   };
-  const current = tiers[tierId];
-  const rawPool = DATA_MAP[tierId] || [];
   
-  // Взимаме 10 случайни въпроса за Tier 1-3, 15 за Singularity
-  const questionCount = tierId === 0 ? 15 : 10;
-  let pool = shuffleArray([...rawPool]).slice(0, questionCount);
-  
-  pool = pool.map(randomizeQuestionOptions);
-  return { ...current, questions: pool };
+  return (
+    <button 
+      type="button"
+      onClick={(e) => {
+        if (onClick) onClick(e);
+      }} 
+      className={`${base} ${styles[variant as keyof typeof styles]} ${className}`}
+    >
+      <span className="relative z-10 unskew flex items-center justify-center gap-3">
+        {children}
+      </span>
+      <div className="absolute top-0 -left-full w-full h-full bg-white/20 skew-x-[45deg] group-hover:left-full transition-all duration-500 ease-in-out"></div>
+    </button>
+  );
+};
+
+const FAILURE_COMMENTS: Record<number, string[]> = {
+  1: ["Върви да пасеш патките на село!", "Пълен Rookie провал!", "Марш в началното училище!"],
+  2: ["Дънната ти платка стана на въглен!", "Тротлинг на интелектуално ниво!", "Изгори захранването!"],
+  3: ["Критична системна грешка: Noob!", "Error 404: Skill Not Found!", "Пълен краш на Xtreme нивото!"],
+  0: ["Сингулярността те заличи!", "Твоят интелект е под абсолютната нула!", "Квантов провал!"]
 };
 
 const App = () => {
   const [view, setView] = useState('home');
   const [playerName, setPlayerName] = useState("");
-  const [activeMission, setActiveMission] = useState<any>(null);
-  const [qIndex, setQIndex] = useState(0);
-  const [status, setStatus] = useState<'playing' | 'explaining' | 'bonus' | 'failed' | 'glitch'>('playing');
-  const [timer, setTimer] = useState(120);
-  const [bonusQuestion, setBonusQuestion] = useState<any>(null);
-  const [bonusSourceTier, setBonusSourceTier] = useState<number>(0); // New state to track bonus origin
-  const [currentInsult, setCurrentInsult] = useState("");
-  const [mistakes, setMistakes] = useState(0);
-  
-  // State for progression
+  const [activeTier, setActiveTier] = useState<number>(1);
   const [unlockedTiers, setUnlockedTiers] = useState<number[]>([1]);
-  const [finishedTiers, setFinishedTiers] = useState<number[]>([]);
-  
-  const timerRef = useRef<any>(null);
-  const explanationScrollRef = useRef<HTMLDivElement>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [qIndex, setQIndex] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [status, setStatus] = useState<'playing' | 'explaining' | 'failed' | 'overclock' | 'rebooting'>('playing');
+  const [timer, setTimer] = useState(0);
+  const [overclockQ, setOverclockQ] = useState<any>(null);
+  const [failMsg, setFailMsg] = useState("");
+  const [isFatalError, setIsFatalError] = useState(false);
 
-  useEffect(() => {
-    if (status === 'failed') playSound('error');
-  }, [status]);
-
-  const handleFail = (tierId: number) => {
-    const config = TIER_CONFIG[tierId] || TIER_CONFIG[1];
-    setCurrentInsult(config.insults[Math.floor(Math.random() * config.insults.length)]);
-    setStatus('failed');
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
-
-  const handleRetry = () => {
-    setUnlockedTiers([1]);
-    setFinishedTiers([]);
-    setQIndex(0);
-    setActiveMission(null);
-    setStatus('playing');
-    setView('selector');
-    setMistakes(0);
-  };
-
-  const handleAnswerClick = (index: number) => {
-    const currentQ = status === 'bonus' ? bonusQuestion : activeMission.questions[qIndex];
-    
-    if (index === currentQ.correct) {
-      if (status === 'bonus') {
-        // OVERCLOCK SUCCEEDED: Instant skip
-        playSound('success');
-        setTimer(0);
-        setStatus('explaining');
-        if (explanationScrollRef.current) explanationScrollRef.current.scrollTop = 0;
-      } else {
-        // MAIN QUESTION SUCCEEDED
-        playSound('success');
-        setStatus('explaining');
-        setTimer(120); 
-        if (explanationScrollRef.current) explanationScrollRef.current.scrollTop = 0;
-      }
-    } else {
-      playSound('error');
-      
-      if (status === 'bonus') {
-         setStatus('explaining');
-      } else {
-         const newMistakes = mistakes + 1;
-         setMistakes(newMistakes);
-         if (newMistakes > (TIER_CONFIG[activeMission.id]?.allowedMistakes || 0)) {
-           handleFail(activeMission.id);
-         }
-      }
-    }
-  };
-
-  // STRICT BONUS LOGIC
-  const startBonus = () => {
-    let sourceTierId = 1;
-
-    // Explicit mapping to prevent Tier 0 leakage
-    if (activeMission.id === 1) {
-      sourceTierId = 2; // Rookie gets Elite questions
-    } else if (activeMission.id === 2) {
-      sourceTierId = 3; // Elite gets Xtreme questions
-    } else if (activeMission.id === 3) {
-      sourceTierId = 3; // Xtreme gets Xtreme questions (Hard cap, NO Tier 0)
-    } else {
-      // Fallback (should not happen for valid gameplay)
-      sourceTierId = activeMission.id;
-    }
-
-    const pool = DATA_MAP[sourceTierId];
-    // Safety check if pool exists
-    if (!pool || pool.length === 0) {
-        console.error("Missing pool for tier", sourceTierId);
-        return;
-    }
-
-    const rawQ = pool[Math.floor(Math.random() * pool.length)];
-    setBonusQuestion(randomizeQuestionOptions(rawQ));
-    setBonusSourceTier(sourceTierId);
-    setStatus('bonus');
-  };
-
-  useEffect(() => {
-    if (status === 'explaining' && timer > 0) {
-      timerRef.current = setInterval(() => setTimer(prev => prev - 1), 1000);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [status, timer]);
-
-  const proceed = () => {
-    if (qIndex + 1 < activeMission.questions.length) {
-      setQIndex(qIndex + 1);
+  const skipExplanation = () => {
+    if (qIndex < 49) {
+      setQIndex(prev => prev + 1);
       setStatus('playing');
     } else {
-      const currentTierId = activeMission.id;
-      if (!finishedTiers.includes(currentTierId)) {
-        const newFinished = [...finishedTiers, currentTierId];
-        setFinishedTiers(newFinished);
-        
-        let nextTierToUnlock = -1;
-        if (currentTierId === 1) nextTierToUnlock = 2;
-        if (currentTierId === 2) nextTierToUnlock = 3;
-        if (currentTierId === 3) nextTierToUnlock = 0;
-
-        if (nextTierToUnlock !== -1 && !unlockedTiers.includes(nextTierToUnlock)) {
-           setUnlockedTiers([...unlockedTiers, nextTierToUnlock]);
-        }
-      }
+      const next = activeTier === 3 ? 0 : (activeTier === 0 ? 0 : activeTier + 1);
+      setUnlockedTiers(prev => Array.from(new Set([...prev, next])));
       setView('selector');
-      setActiveMission(null);
-      setMistakes(0);
     }
   };
 
-  const startGame = (mission: any) => {
-    if (!unlockedTiers.includes(mission.id)) {
-      playSound('lock');
-      return;
+  useEffect(() => {
+    let t: any;
+    if (status === 'explaining' && timer > 0) {
+      t = setInterval(() => setTimer(prev => prev - 1), 1000);
+    } else if (status === 'explaining' && timer === 0) {
+      skipExplanation();
     }
+    return () => clearInterval(t);
+  }, [status, timer]);
 
-    if (mission.id === 0) {
-       setStatus('glitch');
-       setTimeout(() => {
-         setActiveMission(mission);
-         setQIndex(0);
-         setView('quiz');
-         setStatus('playing');
-         setMistakes(0);
-       }, 2000);
-       return;
+  const rebootSystem = () => {
+    if (isFatalError) {
+        // FULL SYSTEM RESET (Soft Reset за GitHub Pages)
+        setPlayerName(""); 
+        setActiveTier(1);
+        setUnlockedTiers([1]);
+        setQuestions([]);
+        setQIndex(0);
+        setLives(3);
+        setTimer(0);
+        setFailMsg("");
+        setIsFatalError(false);
+        setOverclockQ(null);
+        setStatus('playing'); 
+        setView('home'); 
+    } else {
+        // Рестарт само на нивото
+        startTier(activeTier);
     }
+  };
 
-    setActiveMission(mission); 
-    setQIndex(0); 
-    setView('quiz'); 
-    setMistakes(0);
+  const startTier = (id: number) => {
+    const pool = generateSessionPool(id);
+    setQuestions(pool);
+    setActiveTier(id);
+    setQIndex(0);
+    setLives(3);
     setStatus('playing');
+    setView('quiz');
+    setIsFatalError(false);
+    setFailMsg("");
   };
 
-  const submitName = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (playerName.trim()) setView('selector');
+  const handleAnswer = (idx: number) => {
+    const q = status === 'overclock' ? overclockQ : questions[qIndex];
+    
+    if (idx === q.correct) {
+      if (status === 'overclock') {
+        if (qIndex >= 44) {
+            const next = activeTier === 3 ? 0 : (activeTier === 0 ? 0 : activeTier + 1);
+            setUnlockedTiers(prev => Array.from(new Set([...prev, next])));
+            setView('selector');
+        } else {
+            setQIndex(prev => Math.min(prev + 5, 49));
+            setStatus('playing');
+            setTimer(0);
+        }
+      } else {
+        setStatus('explaining'); 
+        setTimer(60);
+      }
+    } else {
+      if (status === 'overclock') {
+          setFailMsg("КРИТИЧЕН ПРОВАЛ НА ОВЪРКЛОКА! СИСТЕМАТА Е УНИЩОЖЕНА.");
+          setIsFatalError(true);
+          setStatus('failed');
+      } else {
+          const nextLives = lives - 1;
+          setLives(nextLives);
+          if (nextLives <= 0) {
+            const tierComments = FAILURE_COMMENTS[activeTier] || FAILURE_COMMENTS[1];
+            setFailMsg(tierComments[Math.floor(Math.random() * tierComments.length)]);
+            setIsFatalError(false);
+            setStatus('failed');
+          }
+      }
+    }
   };
 
-  if (status === 'glitch') {
-    return (
-      <div className="min-h-screen bg-black/80 flex flex-col items-center justify-center animate-glitch relative">
-        <MatrixBackground />
-        <Ghost size={120} className="text-[#ffd700] mb-8 z-10" />
-        <h2 className="z-10 font-orbitron text-4xl text-[#ffd700] font-black italic uppercase text-center px-6">СИНГУЛЯРНОСТ...</h2>
-        <div className="z-10 mt-4 text-white/20 font-mono">CRITICAL_SYSTEM_OVERRIDE</div>
-      </div>
-    );
-  }
+  const triggerOverclock = () => {
+    const nextTierId = activeTier === 3 ? 0 : (activeTier === 0 ? 0 : activeTier + 1);
+    const pool = generateSessionPool(nextTierId);
+    setOverclockQ(pool[Math.floor(Math.random() * pool.length)]);
+    setStatus('overclock');
+  };
 
-  if (view === 'home') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-transparent overflow-hidden relative">
-        <MatrixBackground />
-        <div className="z-10 mb-8 flex gap-3"><div className="w-3 h-10 bg-[#ff6b00] shadow-[0_0_20px_#ff6b00]"></div><div className="w-3 h-10 bg-white/20"></div></div>
-        <h1 className="z-10 font-orbitron text-[clamp(2.5rem,10vw,8rem)] font-black italic mb-4 text-white tracking-tighter leading-none select-none">AORUS <br/><span className="text-[#ff6b00]">ACADEMY</span></h1>
-        <p className="z-10 text-slate-300 text-[clamp(0.9rem,2vw,1.2rem)] max-w-4xl mb-14 font-bold uppercase tracking-[0.4em] italic opacity-90 px-4 bg-black/40 py-2">Тук играят големите. Ако си готов — влизай. Ако не — чети и учи.</p>
-        <button onClick={() => setView('name-entry')} className="z-10 px-16 py-8 aorus-gradient text-black font-orbitron font-black text-2xl italic hover:scale-105 transition-all shadow-[0_0_80px_rgba(255,107,0,0.3)] group"><span className="flex items-center gap-4">ИНИЦИИРАЙ <ChevronRight size={32} /></span></button>
-      </div>
-    );
-  }
+  const meta: Record<number, any> = {
+    1: { title: "AORUS ROOKIE", color: "#00d2ff", icon: Microscope, status: "AIR COOLING" },
+    2: { title: "AORUS ELITE", color: "#ff6b00", icon: Gauge, status: "WATER COOLING" },
+    3: { title: "AORUS XTREME", color: "#ff0000", icon: Gavel, status: "LN2 OVERCLOCK" },
+    0: { title: "SINGULARITY", color: "#ffd700", icon: Crown, status: "QUANTUM CORE" }
+  };
 
-  if (view === 'name-entry') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-transparent p-6 relative">
-        <MatrixBackground />
-        <div className="max-w-md w-full bg-black/80 backdrop-blur-xl p-10 border border-white/10 relative z-10 rounded-2xl">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ff6b00] to-transparent"></div>
-          <h2 className="font-orbitron text-2xl text-white font-black italic mb-8 uppercase text-center tracking-widest">Идентификация</h2>
-          <form onSubmit={submitName} className="space-y-6">
-            <div>
-              <label className="block text-slate-400 text-xs font-black uppercase tracking-widest mb-2 px-1">Кодово име / Nickname</label>
-              <input autoFocus value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-black/60 border border-white/20 p-4 text-white font-orbitron text-xl focus:border-[#ff6b00] outline-none transition-colors uppercase" placeholder="ВЪВЕДИ ИМЕ..." />
+  const canShowOverclock = ((qIndex + 1) % 5 === 0) && activeTier !== 0;
+
+  if (view === 'home') return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-black">
+      <MatrixBackground />
+      <h1 className="font-orbitron text-[clamp(4rem,15vw,12rem)] font-black italic text-white tracking-tighter leading-none mb-12 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+        AORUS<br/><span className="text-orange-600">ACADEMY</span>
+      </h1>
+      <AorusButton onClick={() => setView('entry')} className="text-4xl px-24 py-10">
+        ИНИЦИИРАЙ ЯДРОТО <ChevronRight size={48} />
+      </AorusButton>
+    </div>
+  );
+
+  if (view === 'entry') return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-black">
+      <MatrixBackground />
+      <div className="max-w-md w-full border border-white/10 p-12 bg-black/95 backdrop-blur-3xl rounded-[2rem] shadow-[0_0_150px_rgba(255,107,0,0.05)]">
+        <Terminal className="text-orange-600 mx-auto mb-10" size={72} />
+        <h2 className="font-orbitron text-2xl font-black text-center mb-12 tracking-[0.3em] uppercase text-white">Идентификация</h2>
+        <input 
+          autoFocus 
+          value={playerName} 
+          onChange={e => setPlayerName(e.target.value)} 
+          className="w-full bg-transparent border-b-4 border-white/10 p-6 text-white font-orbitron text-center outline-none focus:border-orange-600 mb-16 uppercase text-3xl transition-all" 
+          placeholder="КОДОВО ИМЕ..." 
+        />
+        <AorusButton onClick={() => playerName.trim() && setView('selector')} className="w-full text-2xl py-8">
+          ВХОД В СИСТЕМАТА
+        </AorusButton>
+      </div>
+    </div>
+  );
+
+  if (view === 'selector') return (
+    <div className="min-h-screen p-10 flex flex-col bg-[#020202]">
+      <MatrixBackground />
+      <header className="flex justify-between items-center mb-20 border-b border-white/5 pb-10 max-w-7xl mx-auto w-full">
+        <div className="flex items-center gap-6 text-sm font-black uppercase tracking-widest text-white italic">
+          <User size={24} className="text-orange-600" /> ОПЕРАТОР: <span className="text-orange-600">{playerName}</span>
+        </div>
+        <div className="text-[10px] font-black uppercase text-orange-600 animate-pulse flex items-center gap-3 tracking-[0.5em]"><Activity size={18} /> СИСТЕМНА СТАБИЛНОСТ: 100%</div>
+      </header>
+      <div className="grid lg:grid-cols-4 gap-8 flex-1 max-w-7xl mx-auto w-full">
+        {[1, 2, 3, 0].map(id => {
+          const m = meta[id]; const unlocked = unlockedTiers.includes(id);
+          return (
+            <div key={id} onClick={() => unlocked && startTier(id)} className={`group p-12 flex flex-col transition-all border-b-[12px] shadow-2xl relative overflow-hidden backdrop-blur-sm ${unlocked ? 'cursor-pointer hover:bg-white/5 border-white/5 hover:scale-105' : 'opacity-20 grayscale cursor-not-allowed border-transparent'}`} style={{ borderBottomColor: unlocked ? m.color : '#111' }}>
+              {!unlocked && <Lock className="absolute top-6 right-6 text-white/20" size={32} />}
+              <m.icon size={80} style={{color: unlocked ? m.color : '#333'}} className="mb-10" />
+              <h3 className="font-orbitron text-3xl font-black italic text-white mb-6 uppercase tracking-tighter">{m.title}</h3>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em] flex-1">50 Модула</p>
+              <div className="mt-12 pt-8 border-t border-white/5"><span className="text-white font-black italic tracking-widest text-sm">{unlocked ? m.status : "LOCKED"}</span></div>
             </div>
-            <button disabled={!playerName.trim()} className="w-full bg-white text-black font-black font-orbitron py-4 px-6 hover:bg-[#ff6b00] disabled:opacity-50 transition-all uppercase tracking-widest rounded-lg">Потвърди достъп</button>
-          </form>
-        </div>
+          );
+        })}
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (view === 'selector') {
-    return (
-      <div className="min-h-screen p-6 md:p-16 bg-transparent fade-in overflow-y-auto relative">
-        <MatrixBackground />
-        <header className="fixed top-0 left-0 w-full bg-black/80 backdrop-blur-md border-b border-white/5 px-8 py-4 flex justify-between items-center z-50">
-           <div className="flex items-center gap-2 text-slate-400 font-orbitron text-xs tracking-widest"><User size={14} className="text-[#ff6b00]" />OPERATOR: <span className="text-white uppercase">{playerName}</span></div>
-           
-           <div className="hidden md:flex flex-col items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-              <div className="text-[#ff6b00] font-orbitron text-[10px] font-black tracking-[0.2em] uppercase">PhoenixOrg</div>
-              <div className="flex items-center gap-2 text-slate-400 text-[9px] font-mono tracking-wider">
-                <Mail size={10} />
-                phoenixbg.org@gmail.com
-              </div>
-           </div>
-
-           <div className="flex items-center gap-2 text-slate-400 font-orbitron text-xs tracking-widest"><ShieldCheck size={14} className="text-[#ff6b00]" />STATUS: <span className="text-white">ONLINE</span></div>
-        </header>
-
-        <div className="max-w-7xl mx-auto mt-16 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 border-b border-white/10 pb-10 bg-black/20 p-4 rounded-xl">
-             <div className="flex items-center gap-6"><Terminal className="text-[#ff6b00]" size={48} /><h2 className="font-orbitron text-3xl md:text-5xl font-black italic text-white uppercase tracking-tighter">Спецификация</h2></div>
-             <div className="flex items-center gap-3"><Volume2 size={16} className="text-slate-400" /><p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Audio Optimized</p></div>
-          </div>
-          <div className="grid lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 0].map((tier) => {
-              const m = getMissionByTier(tier);
-              const isUnlocked = unlockedTiers.includes(tier);
-              const isFinished = finishedTiers.includes(tier);
-              
-              return (
-                <div key={tier} onClick={() => startGame(m)} className={`group bg-black/60 backdrop-blur-md p-8 border-b-8 transition-all relative overflow-hidden flex flex-col shadow-2xl min-h-[460px] rounded-t-2xl border-white/10 hover:border-b-white transition-all ${!isUnlocked ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-pointer hover:bg-black/80 hover:-translate-y-1'}`} style={{ borderColor: !isUnlocked ? '#333' : m.color }}>
-                  
-                  {!isUnlocked && (
-                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
-                       <Lock size={48} className="text-white/40 mb-4" />
-                       <span className="font-orbitron text-[10px] text-white/40 tracking-[0.3em] uppercase">ЗАКЛЮЧЕНО НИВО</span>
-                       <span className="text-[8px] text-red-500 font-bold mt-2 uppercase">ИЗИСКВА ПРЕДХОДНОТО</span>
-                    </div>
-                  )}
-
-                  {isFinished && (
-                    <div className="absolute top-4 right-4 z-20">
-                      <CheckCircle2 className="text-green-500 w-8 h-8" />
-                    </div>
-                  )}
-
-                  <m.icon size={64} style={{ color: !isUnlocked ? '#444' : m.color }} className={`mb-10 transition-transform ${isUnlocked && 'group-hover:rotate-6 opacity-80'}`} />
-                  <h3 className="font-orbitron text-2xl font-black text-white mb-4 italic uppercase tracking-tighter">{m.title}</h3>
-                  <p className="text-slate-300 font-bold text-xs uppercase tracking-widest leading-relaxed flex-1 opacity-90">{m.subtitle}</p>
-                  
-                  <div className="mb-6 flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
-                    <ShieldCheck size={16} />
-                    <span>{TIER_CONFIG[tier].allowedMistakes === 0 ? "0 ГРЕШКИ (SUDDEN DEATH)" : `${TIER_CONFIG[tier].allowedMistakes} ГРЕШКИ MAX`}</span>
-                  </div>
-
-                  <div className="mt-8 py-6 border-t border-white/10 flex flex-col">
-                     <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{tier === 0 ? "Potential" : "System Status"}</span>
-                     <span className="text-white font-black text-lg italic tracking-wide">{!isUnlocked ? "LOCKED" : m.techStatus}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentQ = status === 'bonus' ? bonusQuestion : activeMission.questions[qIndex];
-  const maxMistakes = TIER_CONFIG[activeMission?.id]?.allowedMistakes || 0;
-  const currentLives = (maxMistakes + 1) - mistakes;
+  const currentQ = status === 'overclock' ? overclockQ : (questions[qIndex] || {text: "", options: []});
+  const activeMeta = meta[activeTier];
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 relative ${activeMission.id === 0 ? 'bg-black/90' : 'bg-transparent'}`}>
+    <div className="min-h-screen flex flex-col relative bg-black selection:bg-orange-600 selection:text-white overflow-x-hidden">
       <MatrixBackground />
-      <header className="h-20 bg-black/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-8 shrink-0 z-50">
-        <div className="flex items-center gap-6">
-          <activeMission.icon style={{ color: activeMission.color }} size={32} className="animate-pulse" />
-          <div className="flex flex-col">
-             <span className="font-orbitron text-white font-black italic tracking-widest uppercase text-xs md:text-lg">{activeMission.title}</span>
-             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest opacity-80" style={{ color: activeMission.color }}>{activeMission.id === 0 ? "СИНГУЛЯРНОСТ" : `МОДУЛ: ${activeMission.id}.${qIndex + 1}`}</span>
-          </div>
+      {status === 'failed' && <div className="fixed inset-0 bg-red-600/10 emergency-reset -z-5 pointer-events-none"></div>}
+      <header className="h-28 border-b border-white/5 flex items-center justify-between px-16 bg-black/90 backdrop-blur-2xl z-50">
+        <div className="flex items-center gap-8">
+           <div className="p-4 bg-white/5 skew-x-[-12deg] border border-white/10"><activeMeta.icon style={{color: activeMeta.color}} size={40} className="unskew" /></div>
+           <div className="flex flex-col"><span className="font-orbitron italic font-black text-2xl text-white">{activeMeta.title}</span><span className="text-[10px] text-orange-600 font-black tracking-[1em] uppercase">Модул {qIndex+1} / 50</span></div>
         </div>
-        <div className="flex items-center gap-2">
-            {[...Array(maxMistakes + 1)].map((_, i) => (
-                <div key={i}>{i < currentLives ? <Heart size={20} className="fill-[#ff6b00] text-[#ff6b00] drop-shadow-[0_0_10px_rgba(255,107,0,1)]" /> : <HeartCrack size={20} className="text-slate-800" />}</div>
-            ))}
-        </div>
-        <div className="hidden md:flex items-center gap-4 font-orbitron text-[10px] text-slate-400 tracking-[0.4em] uppercase">
-           <span className="text-white mr-2">{playerName}</span>
-        </div>
+        <div className="flex gap-6">{Array.from({length: 3}).map((_, i) => (<div key={i}>{i < lives ? <Heart className="text-orange-600 fill-orange-600 shadow-[0_0_25px_#ff6b00]" size={36} /> : <HeartCrack className="text-white/10" size={36} />}</div>))}</div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-hidden relative z-10">
-        <div className="max-w-5xl w-full fade-in h-[calc(100vh-160px)] flex flex-col justify-center">
-          {status === 'explaining' ? (
-            <div className="bg-black/90 backdrop-blur-xl border-l-8 p-8 md:p-12 shadow-2xl relative rounded-r-2xl h-full flex flex-col" style={{ borderColor: activeMission.color }}>
-               {/* Header Area */}
-               <div className="flex-shrink-0 mb-6 border-b border-white/10 pb-6 flex justify-between items-center">
-                  <h2 className="font-orbitron text-3xl font-black italic uppercase tracking-tighter" style={{ color: activeMission.color }}>АНАЛИЗ НА МОДУЛА</h2>
-                  <div className="flex items-center gap-3">
-                     <span className="text-slate-500 font-bold uppercase text-xs tracking-widest">ВРЕМЕ ЗА АСИМИЛИРАНЕ</span>
-                     <div className={`font-mono text-xl ${timer > 0 ? 'text-white' : 'text-green-500'}`}>{timer}s</div>
-                  </div>
-               </div>
-
-               {/* Scrollable Content Area */}
-               <div ref={explanationScrollRef} className="flex-1 overflow-y-auto pr-4 scroll-custom space-y-8">
-                   <div>
-                       <h3 className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-2">ТЕХНИЧЕСКО ОБЯСНЕНИЕ</h3>
-                       <p className="text-lg md:text-xl text-white leading-relaxed font-medium">{currentQ.explanation}</p>
-                   </div>
-                   
-                   <div className="bg-white/5 p-6 border border-white/10 rounded-lg flex gap-4">
-                        <Info className="text-blue-400 shrink-0 mt-1" size={24} />
-                        <div>
-                            <h3 className="text-blue-400/50 font-bold uppercase text-[10px] tracking-widest mb-1">ДОПЪЛНИТЕЛНИ ДАННИ</h3>
-                            <p className="text-slate-300 italic">{currentQ.fact}</p>
-                        </div>
-                   </div>
-               </div>
-
-               {/* Footer / Actions Area */}
-               <div className="flex-shrink-0 pt-6 mt-6 border-t border-white/10">
-                   <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden mb-6">
-                      <div className="h-full transition-all duration-1000 ease-linear" style={{ width: `${(timer / 120) * 100}%`, backgroundColor: activeMission.color }}></div>
-                   </div>
-
-                   <div className="flex flex-col md:flex-row gap-4 h-16">
-                      {activeMission.id !== 0 && timer > 0 && (
-                        <button onClick={startBonus} className="flex-1 bg-red-900/20 border border-red-600/50 text-red-500 hover:bg-red-600 hover:text-white transition-all font-orbitron font-black text-sm uppercase italic tracking-widest flex items-center justify-center gap-2 group">
-                          <Zap size={18} className="group-hover:scale-110 transition-transform" />
-                          <span>Overclock (Skip Timer)</span>
-                        </button>
-                      )}
-                      
-                      <button 
-                        disabled={timer > 0} 
-                        onClick={proceed} 
-                        className={`flex-1 transition-all font-orbitron font-black text-xl uppercase italic tracking-widest flex items-center justify-center gap-3 ${timer > 0 ? 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5' : 'bg-white text-black hover:scale-[1.02] shadow-[0_0_30px_rgba(255,255,255,0.2)]'}`}
-                      >
-                         {timer > 0 ? (
-                             <span className="flex items-center gap-2 animate-pulse"><Binary size={16} /> ОБРАБОТКА...</span>
-                         ) : (
-                             <>
-                                ПРОДЪЛЖИ <ArrowRight size={24} />
-                             </>
-                         )}
-                      </button>
-                   </div>
-               </div>
+      <main className="flex-1 flex flex-col items-center justify-center p-12 text-center max-w-7xl mx-auto w-full z-10">
+        {status === 'failed' ? (
+          <div className="flex flex-col items-center gap-12 fade-in relative z-50">
+            <div className="p-16 md:p-24 border-l-[20px] border-red-600 bg-black/95 shadow-[0_0_250px_rgba(255,0,0,0.4)] animate-glitch">
+                <Skull size={100} className="text-red-600 mb-8 mx-auto" />
+                <h2 className="font-orbitron text-6xl md:text-9xl font-black italic text-red-600 mb-10 uppercase">SYSTEM PURGED</h2>
+                <div className="bg-red-600/10 p-8 border border-red-600/20 mb-8 rounded-xl"><p className="text-white font-black text-3xl md:text-5xl italic leading-tight mb-4">"{failMsg}"</p></div>
+                {isFatalError && <p className="text-orange-500 font-mono text-xl animate-pulse">Всички нива са заключени. Данните са изтрити.</p>}
             </div>
-          ) : status === 'failed' ? (
-            <div className="max-w-2xl mx-auto bg-black/90 backdrop-blur-2xl border border-red-900/50 p-1 relative overflow-hidden animate-glitch rounded-2xl">
-               <div className="absolute top-0 left-0 w-full h-2 bg-red-600 animate-pulse"></div>
-               <div className="p-10 border border-white/5">
-                  <div className="flex justify-between items-start mb-8 border-b border-white/10 pb-6"><div><h2 className="text-4xl font-black font-orbitron text-red-600 italic uppercase tracking-tighter mb-2">MISSION FAILED</h2><p className="text-slate-400 text-xs font-mono uppercase tracking-[0.3em]">CRITICAL ERROR. SYSTEM RESET.</p></div><FileWarning size={48} className="text-red-600" /></div>
-                  <div className="space-y-6 mb-10">
-                     <div className="flex justify-between items-center"><span className="text-slate-400 font-bold uppercase text-xs tracking-widest">OPERATOR:</span><span className="text-white font-orbitron text-xl uppercase">{playerName}</span></div>
-                     <div className="flex justify-between items-center"><span className="text-slate-400 font-bold uppercase text-xs tracking-widest">STATUS:</span><span className="text-red-500 font-black uppercase bg-red-900/20 px-3 py-1 rounded">PROGRESS WIPED</span></div>
-                     <div className="border-t border-white/10 pt-4 mt-4"><span className="text-slate-400 font-bold uppercase text-xs tracking-widest block mb-2">RANK AT DEATH:</span><span className="text-[#ff6b00] font-black font-orbitron text-2xl uppercase italic tracking-wider block text-center py-4 border border-[#ff6b00]/30 bg-[#ff6b00]/10 rounded-xl">{getFailRank(finishedTiers.length)}</span></div>
-                     <div className="bg-red-900/20 p-4 border-l-4 border-red-600 rounded-r-lg"><span className="text-red-400 font-bold uppercase text-[10px] tracking-widest block mb-1">CAUSE OF DEATH:</span><p className="text-white italic font-medium">"{currentInsult}"</p></div>
+            <AorusButton variant="danger" onClick={rebootSystem} className="text-4xl px-24 py-10 shadow-[0_0_50px_rgba(185,28,28,0.4)]">
+                <RefreshCw className="mr-4" /> {isFatalError ? "FULL SYSTEM RESET" : "RETRY TIER"}
+            </AorusButton>
+          </div>
+        ) : status === 'explaining' ? (
+          <div className="bg-black/95 p-20 border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl">
+             <div className="flex justify-between items-end mb-20">
+                <div><h2 className="font-orbitron text-5xl font-black italic uppercase text-orange-600 mb-4">Анализ Завършен</h2><div className="w-48 h-2 bg-orange-600"></div></div>
+                <div className="text-orange-600 font-orbitron font-black text-6xl flex items-center gap-6 bg-orange-600/10 px-12 py-6 border border-white/5 rounded-2xl"><Timer size={48} /> {timer}s</div>
+             </div>
+             <div className="space-y-16 mb-24">
+                <p className="text-4xl text-white font-black italic leading-tight border-l-4 border-white/10 pl-10">{currentQ.explanation}</p>
+                <div className="bg-white/5 p-12 border border-white/10 relative overflow-hidden"><span className="text-orange-600 font-black text-xs uppercase tracking-[1.5em] block mb-8">Инженерни Данни:</span><p className="text-slate-400 italic text-3xl">"{currentQ.fact}"</p></div>
+             </div>
+             
+             {/* ACTION BUTTONS AREA */}
+             <div className="flex flex-col md:flex-row gap-6 items-center justify-between pt-8 border-t border-white/5">
+                <div className="flex-1 w-full">
+                    <AorusButton variant="secondary" onClick={() => setTimer(0)} className="w-full md:w-auto text-xl py-6">
+                        ПРОДЪЛЖИ <ChevronRight />
+                    </AorusButton>
+                </div>
+                
+                {canShowOverclock && (
+                  <div className="flex flex-col items-center gap-4 fade-in animate-pulse">
+                      <span className="text-red-500 font-black text-[10px] uppercase tracking-[0.4em]">
+                        {qIndex >= 44 ? "ПРОПУСНИ ДО СЛЕДВАЩ ТИЪР" : "ПРЕСКОЧИ 5 ВЪПРОСА"}
+                      </span>
+                      <AorusButton variant="danger" onClick={triggerOverclock} className="text-2xl py-8 min-w-[350px] shadow-[0_0_40px_rgba(220,38,38,0.5)]">
+                        <Zap className="mr-3" /> {qIndex >= 44 ? "TIER SKIP OVERCLOCK" : "SPEEDRUN OVERCLOCK"}
+                      </AorusButton>
+                      <span className="text-slate-500 font-mono text-[9px] uppercase tracking-[0.2em]">*Грешка връща в 1-ви клас</span>
                   </div>
-                  <button onClick={handleRetry} className="w-full bg-white text-black font-black font-orbitron py-5 hover:bg-red-500 hover:text-white transition-all uppercase tracking-widest text-lg rounded-lg"><span className="unskew">РЕСТАРТИРАЙ СИМУЛАЦИЯТА</span></button>
-               </div>
+                )}
+             </div>
+             
+             <div className="mt-8 w-full h-1 bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-orange-600 shadow-[0_0_10px_#ff6b00] transition-all duration-1000 linear" style={{width: `${(timer / 60) * 100}%`}}></div></div>
+          </div>
+        ) : (
+          <div className="w-full fade-in">
+            {status === 'overclock' && (
+              <div className="mb-24 flex flex-col items-center">
+                <div className="bg-red-700 text-white px-16 py-6 text-lg font-black transform skew-x-[-15deg] mb-10 shadow-[0_0_50px_rgba(185,28,28,0.5)] italic border-r-8 border-white/50">
+                  <span className="inline-block transform skew-x-[15deg] tracking-[0.2em] flex items-center gap-4"><Trophy size={24} /> {qIndex >= 44 ? "ФИНАЛЕН БОНУС: ПРЕСКОЧИ НИВОТО" : "БОНУС: ПРЕСКОЧИ 5 ВЪПРОСА"}</span>
+                </div>
+                <h3 className="text-red-600 font-black text-xs tracking-[2em] uppercase italic animate-glitch flex items-center gap-2">
+                   <AlertTriangle size={24} /> WARNING: FATAL ERROR RESETS GAME <AlertTriangle size={24} />
+                </h3>
+              </div>
+            )}
+            <h2 className="text-5xl md:text-7xl font-orbitron font-black italic text-white mb-28 tracking-tighter leading-none max-w-6xl mx-auto uppercase drop-shadow-[0_0_30px_rgba(255,255,255,0.05)]">{currentQ.text}</h2>
+            <div className="grid gap-8 max-w-5xl mx-auto">
+              {currentQ.options.map((opt: string, i: number) => (
+                <AorusButton key={i} variant="outline" onClick={() => handleAnswer(i)} className="w-full text-left py-10">
+                   <span className="flex justify-between items-center w-full px-8"><span className="max-w-[85%] text-2xl md:text-3xl tracking-tight leading-snug">{opt}</span><ChevronRight className="opacity-0 group-hover:opacity-100 transition-all text-orange-500 group-hover:translate-x-8" size={56} /></span>
+                </AorusButton>
+              ))}
             </div>
-          ) : (
-            <div className="bg-black/40 backdrop-blur-sm p-8 rounded-3xl h-full flex flex-col justify-center">
-               {status === 'bonus' && (
-                  <div className="mb-4 flex items-center justify-between">
-                     <div className="flex items-center gap-2 text-red-500 font-black uppercase tracking-widest text-xs animate-pulse">
-                        <Zap size={16} /> OVERCLOCK QUESTION (RISK FREE)
-                     </div>
-                     <div className="text-[10px] font-mono text-slate-500 uppercase">
-                        ACCESSING TIER {bonusSourceTier} DATABASE...
-                     </div>
-                  </div>
-               )}
-               <div className="flex-1 flex items-center">
-                  <h2 className="text-[clamp(1.4rem,4vw,2.8rem)] font-orbitron font-black text-white italic leading-[1.2] uppercase tracking-tighter select-none drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">{currentQ.text}</h2>
-               </div>
-               
-               <div className="grid gap-4 mt-8">
-                 {currentQ.options.map((opt: string, i: number) => (
-                   <button key={i} onClick={() => handleAnswerClick(i)} className="w-full text-left p-6 bg-black/70 border border-white/10 font-black text-slate-300 hover:text-white transition-all flex items-center justify-between group skew-box hover:bg-white/10 shadow-xl active:scale-[0.98] rounded-lg">
-                     <span className="font-orbitron text-base md:text-lg italic uppercase tracking-tighter unskew leading-tight pr-6">{opt}</span><ChevronRight size={24} className="opacity-0 group-hover:opacity-100 transition-all unskew shrink-0" style={{ color: activeMission.color }} />
-                   </button>
-                 ))}
-               </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
-      <footer className="h-16 bg-black/80 flex items-center justify-between px-8 border-t border-white/5 shrink-0 z-50">
-        <p className="text-[9px] font-orbitron text-slate-500 tracking-[1.2em] uppercase">AORUS ACADEMY // COMPLETED MODULES: {finishedTiers.length}</p>
+
+      <footer className="h-20 bg-black flex items-center justify-between px-16 border-t border-white/5 text-[12px] font-black text-slate-900 uppercase tracking-[2em] z-50">
+        <div className="flex items-center gap-10"><span>AORUS CORE v9.6 // ОПЕРАТИВЕН СТАТУС</span></div>
+        <div className="flex items-center gap-16"><span className="text-orange-950 italic">НИВО: {activeMeta.title}</span><span className="text-orange-600 shadow-[0_0_10px_#ff6b00]">ИНТЕГРИТЕТ: {Math.round((qIndex/50)*100)}%</span></div>
       </footer>
     </div>
   );
 };
 
-const root = createRoot(document.getElementById('root')!);
-root.render(<App />);
+createRoot(document.getElementById('root')!).render(<App />);
