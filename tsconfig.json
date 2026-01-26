@@ -6,7 +6,6 @@
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "types": ["node"],
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
@@ -18,19 +17,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": [
-    "index.tsx",
-    "tier0.ts",
-    "tier1.ts",
-    "tier2.ts",
-    "tier3.ts",
-    "vite.config.ts",
-    "scripts/**/*.js"
-  ],
-  "exclude": [
-    "src/**",
-    "prisma/**",
-    "dist/**",
-    "node_modules/**"
-  ]
+  "include": ["index.tsx", "tier0.ts", "tier1.ts", "tier2.ts", "tier3.ts"],
+  "exclude": ["src", "prisma", "dist", "node_modules"]
 }
