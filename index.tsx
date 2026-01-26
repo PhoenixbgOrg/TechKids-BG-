@@ -4,7 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { 
   Activity, Terminal, ChevronRight, Skull, 
   Info, Gavel, Microscope, Gauge, Zap, Crown, 
-  Heart, HeartCrack, User, Lock, Timer, AlertTriangle, RefreshCw, Trophy
+  Heart, HeartCrack, User, Lock, Timer, AlertTriangle, RefreshCw, Trophy,
+  Share2, Copy, Check, CheckSquare, Square
 } from 'lucide-react';
 
 // Инклудиране на съществуващите въпроси от файловете
@@ -114,8 +115,8 @@ const MatrixBackground = () => {
   return <canvas ref={canvasRef} className="fixed top-0 left-0 w-full h-full -z-10 opacity-30 pointer-events-none" />;
 };
 
-const AorusButton = ({ children, onClick, variant = 'primary', className = '' }: any) => {
-  const base = "relative px-8 py-4 font-orbitron font-black italic uppercase transition-all transform skew-x-[-12deg] group overflow-hidden shadow-2xl active:scale-95 cursor-pointer select-none border-none outline-none inline-flex items-center justify-center text-center";
+const AorusButton = ({ children, onClick, variant = 'primary', className = '', disabled = false }: any) => {
+  const base = `relative px-8 py-4 font-orbitron font-black italic uppercase transition-all transform skew-x-[-12deg] group overflow-hidden shadow-2xl select-none border-none outline-none inline-flex items-center justify-center text-center ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : 'active:scale-95 cursor-pointer'}`;
   const styles = {
     primary: "bg-orange-600 text-white hover:bg-orange-500 shadow-orange-900/40",
     secondary: "bg-white text-black hover:bg-slate-200 shadow-white/10",
@@ -126,25 +127,44 @@ const AorusButton = ({ children, onClick, variant = 'primary', className = '' }:
   return (
     <button 
       type="button"
+      disabled={disabled}
       onClick={(e) => {
-        if (onClick) onClick(e);
+        if (onClick && !disabled) onClick(e);
       }} 
       className={`${base} ${styles[variant as keyof typeof styles]} ${className}`}
     >
       <span className="relative z-10 unskew flex items-center justify-center gap-3">
         {children}
       </span>
-      <div className="absolute top-0 -left-full w-full h-full bg-white/20 skew-x-[45deg] group-hover:left-full transition-all duration-500 ease-in-out"></div>
+      {!disabled && <div className="absolute top-0 -left-full w-full h-full bg-white/20 skew-x-[45deg] group-hover:left-full transition-all duration-500 ease-in-out"></div>}
     </button>
   );
 };
 
+// Firm but motivating failure comments (No shaming)
 const FAILURE_COMMENTS: Record<number, string[]> = {
-  1: ["Върви да пасеш патките на село!", "Пълен Rookie провал!", "Марш в началното училище!"],
-  2: ["Дънната ти платка стана на въглен!", "Тротлинг на интелектуално ниво!", "Изгори захранването!"],
-  3: ["Критична системна грешка: Noob!", "Error 404: Skill Not Found!", "Пълен краш на Xtreme нивото!"],
-  0: ["Сингулярността те заличи!", "Твоят интелект е под абсолютната нула!", "Квантов провал!"]
+  1: ["Системата прегря. Охлади и опитай пак.", "Добър опит, но недостатъчен. Рестартирай.", "Грешките са част от процеса. Пробвай отново."],
+  2: ["Трябва още практика. Не се отказвай!", "Близо си, но не достатъчно. Рестарт!", "Имаш потенциал. Опитай пак."],
+  3: ["Високо напрежение! Внимавай повече.", "Критична грешка. Системата изисква рестарт.", "Почти го хвана. Следващият път ще успееш."],
+  0: ["Сингулярността е близо, но не и днес.", "Квантова грешка. Опитай отново.", "Вселената ти дава втори шанс. Използвай го."]
 };
+
+const SUCCESS_PHRASES = [
+  "БРАВО!", "ТОЧНО ТАКА.", "СИЛЕН ХОД.", "ОТЛИЧНА РАБОТА.",
+  "ХАКЕРСКО ИЗПЪЛНЕНИЕ!", "СИСТЕМАТА ПОТВЪРЖДАВА.", "АБСОЛЮТНО ТОЧНО.",
+  "ДОМИНАЦИЯ!", "ЧИСТА ПОБЕДА."
+];
+
+const ANALYSIS_HEADERS = [
+  "Анализ на ситуацията",
+  "Технически доклад",
+  "Системен разбор",
+  "Данни от черната кутия",
+  "Инженерен статус"
+];
+
+// Reading time in seconds
+const ANALYSIS_TIME = 3;
 
 const App = () => {
   const [view, setView] = useState('home');
@@ -159,8 +179,36 @@ const App = () => {
   const [overclockQ, setOverclockQ] = useState<any>(null);
   const [failMsg, setFailMsg] = useState("");
   const [isFatalError, setIsFatalError] = useState(false);
+  const [praiseMsg, setPraiseMsg] = useState("");
+  const [copied, setCopied] = useState(false);
+  
+  // New States for Tasks A, B, D
+  const [questionStats, setQuestionStats] = useState<Record<string, number>>({});
+  const [readConfirmed, setReadConfirmed] = useState(false);
+
+  // Load persistence
+  useEffect(() => {
+    const savedName = localStorage.getItem('aorus_player_name');
+    if (savedName) setPlayerName(savedName);
+
+    const savedStats = localStorage.getItem('aorus_q_stats');
+    if (savedStats) {
+      try {
+        setQuestionStats(JSON.parse(savedStats));
+      } catch (e) {
+        console.error("Failed to load stats", e);
+      }
+    }
+  }, []);
+
+  // Save name on change
+  useEffect(() => {
+    if (playerName) localStorage.setItem('aorus_player_name', playerName);
+  }, [playerName]);
 
   const skipExplanation = () => {
+    setCopied(false);
+    setReadConfirmed(false);
     if (qIndex < 49) {
       setQIndex(prev => prev + 1);
       setStatus('playing');
@@ -175,16 +223,14 @@ const App = () => {
     let t: any;
     if (status === 'explaining' && timer > 0) {
       t = setInterval(() => setTimer(prev => prev - 1), 1000);
-    } else if (status === 'explaining' && timer === 0) {
-      skipExplanation();
     }
     return () => clearInterval(t);
   }, [status, timer]);
 
   const rebootSystem = () => {
     if (isFatalError) {
-        // FULL SYSTEM RESET (Soft Reset за GitHub Pages)
-        setPlayerName(""); 
+        // FULL SYSTEM RESET (Keep Name)
+        // setPlayerName(""); // Removed per Task A
         setActiveTier(1);
         setUnlockedTiers([1]);
         setQuestions([]);
@@ -212,12 +258,20 @@ const App = () => {
     setView('quiz');
     setIsFatalError(false);
     setFailMsg("");
+    setReadConfirmed(false);
   };
 
   const handleAnswer = (idx: number) => {
     const q = status === 'overclock' ? overclockQ : questions[qIndex];
     
     if (idx === q.correct) {
+      // Update Stats (Task B)
+      const qKey = q.text; 
+      const newCount = (questionStats[qKey] || 0) + 1;
+      const newStats = { ...questionStats, [qKey]: newCount };
+      setQuestionStats(newStats);
+      localStorage.setItem('aorus_q_stats', JSON.stringify(newStats));
+
       if (status === 'overclock') {
         if (qIndex >= 44) {
             const next = activeTier === 3 ? 0 : (activeTier === 0 ? 0 : activeTier + 1);
@@ -229,8 +283,15 @@ const App = () => {
             setTimer(0);
         }
       } else {
+        // Set praise message
+        if (qIndex === 49) {
+          setPraiseMsg("НИВОТО ПОКРИТО! ТИ СИ МАШИНА.");
+        } else {
+          setPraiseMsg(SUCCESS_PHRASES[Math.floor(Math.random() * SUCCESS_PHRASES.length)]);
+        }
         setStatus('explaining'); 
-        setTimer(60);
+        setTimer(ANALYSIS_TIME);
+        setReadConfirmed(false); // Reset mini-check
       }
     } else {
       if (status === 'overclock') {
@@ -257,6 +318,34 @@ const App = () => {
     setStatus('overclock');
   };
 
+  const handleShare = async () => {
+    const q = questions[qIndex];
+    if (!q) return;
+    
+    const text = `AORUS Academy: ${q.fact} #AORUS`;
+    const url = window.location.href;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'AORUS Academy',
+          text: text,
+          url: url
+        });
+      } catch (err) {
+        console.log("Share cancelled");
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error("Clipboard failed");
+      }
+    }
+  };
+
   const meta: Record<number, any> = {
     1: { title: "AORUS ROOKIE", color: "#00d2ff", icon: Microscope, status: "AIR COOLING" },
     2: { title: "AORUS ELITE", color: "#ff6b00", icon: Gauge, status: "WATER COOLING" },
@@ -265,6 +354,13 @@ const App = () => {
   };
 
   const canShowOverclock = ((qIndex + 1) % 5 === 0) && activeTier !== 0;
+  
+  // Logic for Analysis Text
+  const currentQ = status === 'overclock' ? overclockQ : (questions[qIndex] || {text: "", options: []});
+  const qCount = questionStats[currentQ?.text] || 0;
+  
+  // Rotate headers based on index/random
+  const analysisHeader = ANALYSIS_HEADERS[qIndex % ANALYSIS_HEADERS.length];
 
   if (view === 'home') return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-black">
@@ -324,7 +420,6 @@ const App = () => {
     </div>
   );
 
-  const currentQ = status === 'overclock' ? overclockQ : (questions[qIndex] || {text: "", options: []});
   const activeMeta = meta[activeTier];
 
   return (
@@ -333,7 +428,7 @@ const App = () => {
       {status === 'failed' && <div className="fixed inset-0 bg-red-600/10 emergency-reset -z-5 pointer-events-none"></div>}
       <header className="h-28 border-b border-white/5 flex items-center justify-between px-16 bg-black/90 backdrop-blur-2xl z-50">
         <div className="flex items-center gap-8">
-           <div className="p-4 bg-white/5 skew-x-[-12deg] border border-white/10"><activeMeta.icon style={{color: activeMeta.color}} size={40} className="unskew" /></div>
+           <div className="p-2"><activeMeta.icon style={{color: activeMeta.color}} size={40} /></div>
            <div className="flex flex-col"><span className="font-orbitron italic font-black text-2xl text-white">{activeMeta.title}</span><span className="text-[10px] text-orange-600 font-black tracking-[1em] uppercase">Модул {qIndex+1} / 50</span></div>
         </div>
         <div className="flex gap-6">{Array.from({length: 3}).map((_, i) => (<div key={i}>{i < lives ? <Heart className="text-orange-600 fill-orange-600 shadow-[0_0_25px_#ff6b00]" size={36} /> : <HeartCrack className="text-white/10" size={36} />}</div>))}</div>
@@ -353,21 +448,64 @@ const App = () => {
             </AorusButton>
           </div>
         ) : status === 'explaining' ? (
-          <div className="bg-black/95 p-20 border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl">
-             <div className="flex justify-between items-end mb-20">
-                <div><h2 className="font-orbitron text-5xl font-black italic uppercase text-orange-600 mb-4">Анализ Завършен</h2><div className="w-48 h-2 bg-orange-600"></div></div>
-                <div className="text-orange-600 font-orbitron font-black text-6xl flex items-center gap-6 bg-orange-600/10 px-12 py-6 border border-white/5 rounded-2xl"><Timer size={48} /> {timer}s</div>
-             </div>
-             <div className="space-y-16 mb-24">
-                <p className="text-4xl text-white font-black italic leading-tight border-l-4 border-white/10 pl-10">{currentQ.explanation}</p>
-                <div className="bg-white/5 p-12 border border-white/10 relative overflow-hidden"><span className="text-orange-600 font-black text-xs uppercase tracking-[1.5em] block mb-8">Инженерни Данни:</span><p className="text-slate-400 italic text-3xl">"{currentQ.fact}"</p></div>
+          <div className="bg-black/95 p-20 border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
+             <div className="flex justify-between items-end mb-16">
+                <div className="flex-1">
+                    <h2 className="font-orbitron text-5xl font-black italic uppercase text-orange-600 mb-4">{praiseMsg}</h2>
+                    <div className="w-48 h-2 bg-white/10 overflow-hidden">
+                        <div className="h-full bg-orange-600 transition-all duration-1000 linear" style={{width: `${((ANALYSIS_TIME - timer) / ANALYSIS_TIME) * 100}%`}}></div>
+                    </div>
+                </div>
+                <button 
+                  onClick={handleShare}
+                  className="flex items-center gap-2 px-4 py-2 rounded border border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all active:scale-95 group"
+                >
+                  {copied ? <Check size={20} className="text-green-500" /> : <Share2 size={20} className="text-slate-300 group-hover:text-white" />}
+                  <span className="text-xs font-black uppercase tracking-widest">{copied ? "COPIED" : "SHARE"}</span>
+                </button>
              </div>
              
-             {/* ACTION BUTTONS AREA */}
-             <div className="flex flex-col md:flex-row gap-6 items-center justify-between pt-8 border-t border-white/5">
-                <div className="flex-1 w-full">
-                    <AorusButton variant="secondary" onClick={() => setTimer(0)} className="w-full md:w-auto text-xl py-6">
-                        ПРОДЪЛЖИ <ChevronRight />
+             <div className="space-y-12 mb-16">
+                <div className="pl-6 border-l-2 border-slate-700">
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2 block">{analysisHeader}:</span>
+                    {qCount > 1 ? (
+                        <div>
+                             <p className="text-2xl text-white font-bold italic leading-tight opacity-90">"{currentQ.explanation.split('.')[0]}."</p>
+                             <span className="text-xs text-orange-600 mt-2 block uppercase tracking-widest">* ПОВТОРЕН АНАЛИЗ (ВИДЯНО {qCount} ПЪТИ)</span>
+                        </div>
+                    ) : (
+                        <p className="text-3xl text-white font-black italic leading-tight">{currentQ.explanation}</p>
+                    )}
+                </div>
+
+                <div className="bg-transparent p-10 border border-dashed border-white/20 relative overflow-hidden rounded-xl">
+                    <span className="text-orange-600/80 font-black text-xs uppercase tracking-[1.5em] block mb-4">Инженерни Данни:</span>
+                    <p className="text-slate-400 italic text-xl">"{currentQ.fact}"</p>
+                </div>
+             </div>
+             
+             <div className="flex flex-col md:flex-row gap-8 items-center justify-between pt-8 border-t border-white/5">
+                <div className="flex-1 w-full flex flex-col md:flex-row items-center gap-6">
+                    <button 
+                        onClick={() => setReadConfirmed(!readConfirmed)}
+                        disabled={timer > 0}
+                        className={`flex items-center gap-4 px-6 py-4 rounded-xl border-2 transition-all group ${
+                            readConfirmed 
+                            ? 'border-green-500 bg-green-900/10 text-green-400' 
+                            : 'border-slate-700 hover:border-white text-slate-400 hover:text-white'
+                        } ${timer > 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                        {readConfirmed ? <CheckSquare size={24} /> : <Square size={24} />}
+                        <span className="font-black uppercase tracking-widest text-sm">Потвърждавам, че прочетох</span>
+                    </button>
+
+                    <AorusButton 
+                        variant="secondary" 
+                        onClick={() => timer === 0 && readConfirmed && skipExplanation()} 
+                        disabled={timer > 0 || !readConfirmed}
+                        className="w-full md:w-auto text-xl py-6"
+                    >
+                        {timer > 0 ? "ЗАРЕЖДАНЕ..." : "ПРОДЪЛЖИ"} <ChevronRight />
                     </AorusButton>
                 </div>
                 
@@ -376,22 +514,20 @@ const App = () => {
                       <span className="text-red-500 font-black text-[10px] uppercase tracking-[0.4em]">
                         {qIndex >= 44 ? "ПРОПУСНИ ДО СЛЕДВАЩ ТИЪР" : "ПРЕСКОЧИ 5 ВЪПРОСА"}
                       </span>
-                      <AorusButton variant="danger" onClick={triggerOverclock} className="text-2xl py-8 min-w-[350px] shadow-[0_0_40px_rgba(220,38,38,0.5)]">
+                      <AorusButton disabled={timer > 0 || !readConfirmed} variant="danger" onClick={triggerOverclock} className="text-2xl py-8 min-w-[350px] shadow-[0_0_40px_rgba(220,38,38,0.5)]">
                         <Zap className="mr-3" /> {qIndex >= 44 ? "TIER SKIP OVERCLOCK" : "SPEEDRUN OVERCLOCK"}
                       </AorusButton>
                       <span className="text-slate-500 font-mono text-[9px] uppercase tracking-[0.2em]">*Грешка връща в 1-ви клас</span>
                   </div>
                 )}
              </div>
-             
-             <div className="mt-8 w-full h-1 bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-orange-600 shadow-[0_0_10px_#ff6b00] transition-all duration-1000 linear" style={{width: `${(timer / 60) * 100}%`}}></div></div>
           </div>
         ) : (
           <div className="w-full fade-in">
             {status === 'overclock' && (
               <div className="mb-24 flex flex-col items-center">
-                <div className="bg-red-700 text-white px-16 py-6 text-lg font-black transform skew-x-[-15deg] mb-10 shadow-[0_0_50px_rgba(185,28,28,0.5)] italic border-r-8 border-white/50">
-                  <span className="inline-block transform skew-x-[15deg] tracking-[0.2em] flex items-center gap-4"><Trophy size={24} /> {qIndex >= 44 ? "ФИНАЛЕН БОНУС: ПРЕСКОЧИ НИВОТО" : "БОНУС: ПРЕСКОЧИ 5 ВЪПРОСА"}</span>
+                <div className="border-4 border-red-600/50 text-red-500 px-12 py-4 text-lg font-black transform skew-x-[-15deg] mb-10 italic bg-black/50 backdrop-blur tracking-widest">
+                  <span className="inline-block transform skew-x-[15deg] flex items-center gap-4"><Trophy size={24} /> {qIndex >= 44 ? "ФИНАЛЕН БОНУС: ПРЕСКОЧИ НИВОТО" : "БОНУС: ПРЕСКОЧИ 5 ВЪПРОСА"}</span>
                 </div>
                 <h3 className="text-red-600 font-black text-xs tracking-[2em] uppercase italic animate-glitch flex items-center gap-2">
                    <AlertTriangle size={24} /> WARNING: FATAL ERROR RESETS GAME <AlertTriangle size={24} />
@@ -410,9 +546,20 @@ const App = () => {
         )}
       </main>
 
-      <footer className="h-20 bg-black flex items-center justify-between px-16 border-t border-white/5 text-[12px] font-black text-slate-900 uppercase tracking-[2em] z-50">
-        <div className="flex items-center gap-10"><span>AORUS CORE v9.6 // ОПЕРАТИВЕН СТАТУС</span></div>
-        <div className="flex items-center gap-16"><span className="text-orange-950 italic">НИВО: {activeMeta.title}</span><span className="text-orange-600 shadow-[0_0_10px_#ff6b00]">ИНТЕГРИТЕТ: {Math.round((qIndex/50)*100)}%</span></div>
+      <footer className="w-full bg-black border-t border-white/10 p-6 md:px-12 z-50 flex flex-col md:flex-row items-center justify-between gap-6 text-xs font-bold uppercase tracking-widest">
+        <div className="flex items-center gap-3 text-slate-500">
+            <Activity size={16} className="text-orange-600 animate-pulse" />
+            <span>AORUS CORE v9.6 // ONLINE</span>
+        </div>
+        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+            <span className="text-slate-400 italic">
+                НИВО: <span style={{ color: activeMeta.color }} className="ml-2">{activeMeta.title}</span>
+            </span>
+            <div className="px-6 py-2 border border-orange-600/40 bg-orange-900/10 text-orange-500 rounded flex items-center gap-2 shadow-[0_0_15px_rgba(255,107,0,0.1)]">
+                <span>ИНТЕГРИТЕТ:</span>
+                <span className="text-white">{Math.round((qIndex/50)*100)}%</span>
+            </div>
+        </div>
       </footer>
     </div>
   );
