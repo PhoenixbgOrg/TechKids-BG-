@@ -448,7 +448,7 @@ const App = () => {
             </AorusButton>
           </div>
         ) : status === 'explaining' ? (
-          <div className="bg-black/95 p-6 sm:p-10 md:p-20 border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
+          <div className="bg-black/95 p-5 sm:p-10 md:p-20 border-l-[10px] sm:border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-8 sm:mb-16">
                 <div className="flex-1">
                     <h2 className="font-orbitron text-3xl sm:text-5xl font-black italic uppercase text-orange-600 mb-3 sm:mb-4">{praiseMsg}</h2>
@@ -461,25 +461,25 @@ const App = () => {
                   className="flex items-center gap-2 px-4 py-2 rounded border border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all active:scale-95 group"
                 >
                   {copied ? <Check size={20} className="text-green-500" /> : <Share2 size={20} className="text-slate-300 group-hover:text-white" />}
-                  <span className="text-xs font-black uppercase tracking-widest">{copied ? "COPIED" : "SHARE"}</span>
+                  <span className="text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-widest">{copied ? "COPIED" : "SHARE"}</span>
                 </button>
              </div>
              
-             <div className="space-y-12 mb-16">
+             <div className="space-y-6 sm:space-y-12 mb-8 sm:mb-16">
                 <div className="pl-6 border-l-2 border-slate-700">
                     <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2 block">{analysisHeader}:</span>
                     {qCount > 1 ? (
                         <div>
-                             <p className="text-lg sm:text-2xl text-white font-bold italic leading-tight opacity-90">"{currentQ.explanation.split('.')[0]}."</p>
-                             <span className="text-xs text-orange-600 mt-2 block uppercase tracking-widest">* ПОВТОРЕН АНАЛИЗ (ВИДЯНО {qCount} ПЪТИ)</span>
+                             <p className="text-base sm:text-2xl text-white font-bold italic leading-snug opacity-90">"{currentQ.explanation.split('.')[0]}."</p>
+                             <span className="text-[11px] sm:text-xs text-orange-600 mt-2 block uppercase tracking-[0.2em] sm:tracking-widest">* ПОВТОРЕН АНАЛИЗ (ВИДЯНО {qCount} ПЪТИ)</span>
                         </div>
                     ) : (
-                        <p className="text-xl sm:text-3xl text-white font-black italic leading-tight">{currentQ.explanation}</p>
+                        <p className="text-lg sm:text-3xl text-white font-black italic leading-snug">{currentQ.explanation}</p>
                     )}
                 </div>
 
                 <div className="bg-transparent p-5 sm:p-10 border border-dashed border-white/20 relative overflow-hidden rounded-xl">
-                    <span className="text-orange-600/80 font-black text-xs uppercase tracking-[1.5em] block mb-4">Инженерни Данни:</span>
+                    <span className="text-orange-600/80 font-black text-[11px] sm:text-xs uppercase tracking-[0.35em] sm:tracking-[1.5em] block mb-4">Инженерни Данни:</span>
                     <p className="text-slate-400 italic text-base sm:text-xl">"{currentQ.fact}"</p>
                 </div>
              </div>
@@ -496,7 +496,7 @@ const App = () => {
                         } ${timer > 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                         {readConfirmed ? <CheckSquare size={24} /> : <Square size={24} />}
-                        <span className="font-black uppercase tracking-widest text-sm">Потвърждавам, че прочетох</span>
+                        <span className="font-black uppercase tracking-[0.08em] sm:tracking-widest text-xs sm:text-sm leading-tight">Потвърждавам, че прочетох</span>
                     </button>
 
                     <AorusButton 
