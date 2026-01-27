@@ -33,6 +33,13 @@
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
+        html, body { height: 100%; }
+        #root { min-height: 100dvh; }
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+
         ::selection { background: #ff6b00; color: black; }
     </style>
 <script type="importmap">

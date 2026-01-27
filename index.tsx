@@ -116,7 +116,7 @@ const MatrixBackground = () => {
 };
 
 const AorusButton = ({ children, onClick, variant = 'primary', className = '', disabled = false }: any) => {
-  const base = `relative px-8 py-4 font-orbitron font-black italic uppercase transition-all transform skew-x-[-12deg] group overflow-hidden shadow-2xl select-none border-none outline-none inline-flex items-center justify-center text-center ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : 'active:scale-95 cursor-pointer'}`;
+  const base = `relative px-5 py-3 sm:px-8 sm:py-4 font-orbitron font-black italic uppercase transition-all transform skew-x-[-12deg] group overflow-hidden shadow-2xl select-none border-none outline-none inline-flex items-center justify-center text-center ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : 'active:scale-95 cursor-pointer'}`;
   const styles = {
     primary: "bg-orange-600 text-white hover:bg-orange-500 shadow-orange-900/40",
     secondary: "bg-white text-black hover:bg-slate-200 shadow-white/10",
@@ -368,8 +368,8 @@ const App = () => {
       <h1 className="font-orbitron text-[clamp(4rem,15vw,12rem)] font-black italic text-white tracking-tighter leading-none mb-12 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
         AORUS<br/><span className="text-orange-600">ACADEMY</span>
       </h1>
-      <AorusButton onClick={() => setView('entry')} className="text-4xl px-24 py-10">
-        ИНИЦИИРАЙ ЯДРОТО <ChevronRight size={48} />
+      <AorusButton onClick={() => setView('entry')} className="w-full sm:w-auto text-xl sm:text-2xl md:text-4xl px-6 sm:px-12 md:px-24 py-4 sm:py-6 md:py-10">
+        ИНИЦИИРАЙ ЯДРОТО <ChevronRight className="w-6 h-6 sm:w-10 sm:h-10 md:w-12 md:h-12" />
       </AorusButton>
     </div>
   );
@@ -377,14 +377,14 @@ const App = () => {
   if (view === 'entry') return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-black">
       <MatrixBackground />
-      <div className="max-w-md w-full border border-white/10 p-12 bg-black/95 backdrop-blur-3xl rounded-[2rem] shadow-[0_0_150px_rgba(255,107,0,0.05)]">
+      <div className="max-w-md w-full border border-white/10 p-6 sm:p-10 md:p-12 bg-black/95 backdrop-blur-3xl rounded-[2rem] shadow-[0_0_150px_rgba(255,107,0,0.05)]">
         <Terminal className="text-orange-600 mx-auto mb-10" size={72} />
         <h2 className="font-orbitron text-2xl font-black text-center mb-12 tracking-[0.3em] uppercase text-white">Идентификация</h2>
         <input 
           autoFocus 
           value={playerName} 
           onChange={e => setPlayerName(e.target.value)} 
-          className="w-full bg-transparent border-b-4 border-white/10 p-6 text-white font-orbitron text-center outline-none focus:border-orange-600 mb-16 uppercase text-3xl transition-all" 
+          className="w-full bg-transparent border-b-4 border-white/10 p-4 sm:p-6 text-white font-orbitron text-center outline-none focus:border-orange-600 mb-10 sm:mb-16 uppercase text-xl sm:text-3xl transition-all" 
           placeholder="КОДОВО ИМЕ..." 
         />
         <AorusButton onClick={() => playerName.trim() && setView('selector')} className="w-full text-2xl py-8">
@@ -395,22 +395,22 @@ const App = () => {
   );
 
   if (view === 'selector') return (
-    <div className="min-h-screen p-10 flex flex-col bg-[#020202]">
+    <div className="min-h-screen p-4 sm:p-10 flex flex-col bg-[#020202]">
       <MatrixBackground />
-      <header className="flex justify-between items-center mb-20 border-b border-white/5 pb-10 max-w-7xl mx-auto w-full">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 sm:mb-20 border-b border-white/5 pb-6 sm:pb-10 max-w-7xl mx-auto w-full gap-4">
         <div className="flex items-center gap-6 text-sm font-black uppercase tracking-widest text-white italic">
           <User size={24} className="text-orange-600" /> ОПЕРАТОР: <span className="text-orange-600">{playerName}</span>
         </div>
-        <div className="text-[10px] font-black uppercase text-orange-600 animate-pulse flex items-center gap-3 tracking-[0.5em]"><Activity size={18} /> СИСТЕМНА СТАБИЛНОСТ: 100%</div>
+        <div className="text-[10px] font-black uppercase text-orange-600 animate-pulse flex items-center gap-3 tracking-[0.3em] sm:tracking-[0.5em]"><Activity size={18} /> СИСТЕМНА СТАБИЛНОСТ: 100%</div>
       </header>
-      <div className="grid lg:grid-cols-4 gap-8 flex-1 max-w-7xl mx-auto w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 flex-1 max-w-7xl mx-auto w-full">
         {[1, 2, 3, 0].map(id => {
           const m = meta[id]; const unlocked = unlockedTiers.includes(id);
           return (
-            <div key={id} onClick={() => unlocked && startTier(id)} className={`group p-12 flex flex-col transition-all border-b-[12px] shadow-2xl relative overflow-hidden backdrop-blur-sm ${unlocked ? 'cursor-pointer hover:bg-white/5 border-white/5 hover:scale-105' : 'opacity-20 grayscale cursor-not-allowed border-transparent'}`} style={{ borderBottomColor: unlocked ? m.color : '#111' }}>
+            <div key={id} onClick={() => unlocked && startTier(id)} className={`group p-5 sm:p-8 lg:p-12 flex flex-col transition-all border-b-[12px] shadow-2xl relative overflow-hidden backdrop-blur-sm ${unlocked ? 'cursor-pointer hover:bg-white/5 border-white/5 hover:scale-105' : 'opacity-20 grayscale cursor-not-allowed border-transparent'}`} style={{ borderBottomColor: unlocked ? m.color : '#111' }}>
               {!unlocked && <Lock className="absolute top-6 right-6 text-white/20" size={32} />}
-              <m.icon size={80} style={{color: unlocked ? m.color : '#333'}} className="mb-10" />
-              <h3 className="font-orbitron text-3xl font-black italic text-white mb-6 uppercase tracking-tighter">{m.title}</h3>
+              <m.icon size={64} style={{color: unlocked ? m.color : '#333'}} className="mb-6 sm:mb-10" />
+              <h3 className="font-orbitron text-2xl sm:text-3xl font-black italic text-white mb-4 sm:mb-6 uppercase tracking-tighter">{m.title}</h3>
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em] flex-1">50 Модула</p>
               <div className="mt-12 pt-8 border-t border-white/5"><span className="text-white font-black italic tracking-widest text-sm">{unlocked ? m.status : "LOCKED"}</span></div>
             </div>
@@ -426,15 +426,15 @@ const App = () => {
     <div className="min-h-screen flex flex-col relative bg-black selection:bg-orange-600 selection:text-white overflow-x-hidden">
       <MatrixBackground />
       {status === 'failed' && <div className="fixed inset-0 bg-red-600/10 emergency-reset -z-5 pointer-events-none"></div>}
-      <header className="h-28 border-b border-white/5 flex items-center justify-between px-16 bg-black/90 backdrop-blur-2xl z-50">
+      <header className="h-auto py-4 border-b border-white/5 flex items-center justify-between px-4 sm:px-16 bg-black/90 backdrop-blur-2xl z-50">
         <div className="flex items-center gap-8">
-           <div className="p-2"><activeMeta.icon style={{color: activeMeta.color}} size={40} /></div>
-           <div className="flex flex-col"><span className="font-orbitron italic font-black text-2xl text-white">{activeMeta.title}</span><span className="text-[10px] text-orange-600 font-black tracking-[1em] uppercase">Модул {qIndex+1} / 50</span></div>
+           <div className="p-2"><activeMeta.icon style={{color: activeMeta.color}} className="w-8 h-8 sm:w-10 sm:h-10" /></div>
+           <div className="flex flex-col"><span className="font-orbitron italic font-black text-xl sm:text-2xl text-white">{activeMeta.title}</span><span className="text-[10px] text-orange-600 font-black tracking-[0.6em] sm:tracking-[1em] uppercase">Модул {qIndex+1} / 50</span></div>
         </div>
-        <div className="flex gap-6">{Array.from({length: 3}).map((_, i) => (<div key={i}>{i < lives ? <Heart className="text-orange-600 fill-orange-600 shadow-[0_0_25px_#ff6b00]" size={36} /> : <HeartCrack className="text-white/10" size={36} />}</div>))}</div>
+        <div className="flex gap-3 sm:gap-6">{Array.from({length: 3}).map((_, i) => (<div key={i}>{i < lives ? <Heart className="text-orange-600 fill-orange-600 shadow-[0_0_25px_#ff6b00] w-7 h-7 sm:w-9 sm:h-9" /> : <HeartCrack className="text-white/10 w-7 h-7 sm:w-9 sm:h-9" />}</div>))}</div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-12 text-center max-w-7xl mx-auto w-full z-10">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 text-center max-w-7xl mx-auto w-full z-10">
         {status === 'failed' ? (
           <div className="flex flex-col items-center gap-12 fade-in relative z-50">
             <div className="p-16 md:p-24 border-l-[20px] border-red-600 bg-black/95 shadow-[0_0_250px_rgba(255,0,0,0.4)] animate-glitch">
@@ -443,15 +443,15 @@ const App = () => {
                 <div className="bg-red-600/10 p-8 border border-red-600/20 mb-8 rounded-xl"><p className="text-white font-black text-3xl md:text-5xl italic leading-tight mb-4">"{failMsg}"</p></div>
                 {isFatalError && <p className="text-orange-500 font-mono text-xl animate-pulse">Всички нива са заключени. Данните са изтрити.</p>}
             </div>
-            <AorusButton variant="danger" onClick={rebootSystem} className="text-4xl px-24 py-10 shadow-[0_0_50px_rgba(185,28,28,0.4)]">
+            <AorusButton variant="danger" onClick={rebootSystem} className="w-full sm:w-auto text-xl sm:text-3xl md:text-4xl px-6 sm:px-12 md:px-24 py-4 sm:py-6 md:py-10 shadow-[0_0_50px_rgba(185,28,28,0.4)]">
                 <RefreshCw className="mr-4" /> {isFatalError ? "FULL SYSTEM RESET" : "RETRY TIER"}
             </AorusButton>
           </div>
         ) : status === 'explaining' ? (
-          <div className="bg-black/95 p-20 border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
-             <div className="flex justify-between items-end mb-16">
+          <div className="bg-black/95 p-6 sm:p-10 md:p-20 border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-8 sm:mb-16">
                 <div className="flex-1">
-                    <h2 className="font-orbitron text-5xl font-black italic uppercase text-orange-600 mb-4">{praiseMsg}</h2>
+                    <h2 className="font-orbitron text-3xl sm:text-5xl font-black italic uppercase text-orange-600 mb-3 sm:mb-4">{praiseMsg}</h2>
                     <div className="w-48 h-2 bg-white/10 overflow-hidden">
                         <div className="h-full bg-orange-600 transition-all duration-1000 linear" style={{width: `${((ANALYSIS_TIME - timer) / ANALYSIS_TIME) * 100}%`}}></div>
                     </div>
@@ -470,17 +470,17 @@ const App = () => {
                     <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2 block">{analysisHeader}:</span>
                     {qCount > 1 ? (
                         <div>
-                             <p className="text-2xl text-white font-bold italic leading-tight opacity-90">"{currentQ.explanation.split('.')[0]}."</p>
+                             <p className="text-lg sm:text-2xl text-white font-bold italic leading-tight opacity-90">"{currentQ.explanation.split('.')[0]}."</p>
                              <span className="text-xs text-orange-600 mt-2 block uppercase tracking-widest">* ПОВТОРЕН АНАЛИЗ (ВИДЯНО {qCount} ПЪТИ)</span>
                         </div>
                     ) : (
-                        <p className="text-3xl text-white font-black italic leading-tight">{currentQ.explanation}</p>
+                        <p className="text-xl sm:text-3xl text-white font-black italic leading-tight">{currentQ.explanation}</p>
                     )}
                 </div>
 
-                <div className="bg-transparent p-10 border border-dashed border-white/20 relative overflow-hidden rounded-xl">
+                <div className="bg-transparent p-5 sm:p-10 border border-dashed border-white/20 relative overflow-hidden rounded-xl">
                     <span className="text-orange-600/80 font-black text-xs uppercase tracking-[1.5em] block mb-4">Инженерни Данни:</span>
-                    <p className="text-slate-400 italic text-xl">"{currentQ.fact}"</p>
+                    <p className="text-slate-400 italic text-base sm:text-xl">"{currentQ.fact}"</p>
                 </div>
              </div>
              
@@ -503,7 +503,7 @@ const App = () => {
                         variant="secondary" 
                         onClick={() => timer === 0 && readConfirmed && skipExplanation()} 
                         disabled={timer > 0 || !readConfirmed}
-                        className="w-full md:w-auto text-xl py-6"
+                        className="w-full md:w-auto text-lg sm:text-xl py-4 sm:py-6"
                     >
                         {timer > 0 ? "ЗАРЕЖДАНЕ..." : "ПРОДЪЛЖИ"} <ChevronRight />
                     </AorusButton>
@@ -514,7 +514,7 @@ const App = () => {
                       <span className="text-red-500 font-black text-[10px] uppercase tracking-[0.4em]">
                         {qIndex >= 44 ? "ПРОПУСНИ ДО СЛЕДВАЩ ТИЪР" : "ПРЕСКОЧИ 5 ВЪПРОСА"}
                       </span>
-                      <AorusButton disabled={timer > 0 || !readConfirmed} variant="danger" onClick={triggerOverclock} className="text-2xl py-8 min-w-[350px] shadow-[0_0_40px_rgba(220,38,38,0.5)]">
+                      <AorusButton disabled={timer > 0 || !readConfirmed} variant="danger" onClick={triggerOverclock} className="w-full sm:min-w-[350px] text-xl sm:text-2xl py-5 sm:py-8 shadow-[0_0_40px_rgba(220,38,38,0.5)]">
                         <Zap className="mr-3" /> {qIndex >= 44 ? "TIER SKIP OVERCLOCK" : "SPEEDRUN OVERCLOCK"}
                       </AorusButton>
                       <span className="text-slate-500 font-mono text-[9px] uppercase tracking-[0.2em]">*Грешка връща в 1-ви клас</span>
@@ -526,19 +526,19 @@ const App = () => {
           <div className="w-full fade-in">
             {status === 'overclock' && (
               <div className="mb-24 flex flex-col items-center">
-                <div className="border-4 border-red-600/50 text-red-500 px-12 py-4 text-lg font-black transform skew-x-[-15deg] mb-10 italic bg-black/50 backdrop-blur tracking-widest">
+                <div className="border-4 border-red-600/50 text-red-500 px-4 sm:px-12 py-3 sm:py-4 text-sm sm:text-lg font-black transform skew-x-[-15deg] mb-8 sm:mb-10 italic bg-black/50 backdrop-blur tracking-widest">
                   <span className="inline-block transform skew-x-[15deg] flex items-center gap-4"><Trophy size={24} /> {qIndex >= 44 ? "ФИНАЛЕН БОНУС: ПРЕСКОЧИ НИВОТО" : "БОНУС: ПРЕСКОЧИ 5 ВЪПРОСА"}</span>
                 </div>
-                <h3 className="text-red-600 font-black text-xs tracking-[2em] uppercase italic animate-glitch flex items-center gap-2">
+                <h3 className="text-red-600 font-black text-[10px] sm:text-xs tracking-[1em] sm:tracking-[2em] uppercase italic animate-glitch flex items-center gap-2 text-center">
                    <AlertTriangle size={24} /> WARNING: FATAL ERROR RESETS GAME <AlertTriangle size={24} />
                 </h3>
               </div>
             )}
-            <h2 className="text-5xl md:text-7xl font-orbitron font-black italic text-white mb-28 tracking-tighter leading-none max-w-6xl mx-auto uppercase drop-shadow-[0_0_30px_rgba(255,255,255,0.05)]">{currentQ.text}</h2>
-            <div className="grid gap-8 max-w-5xl mx-auto">
+            <h2 className="text-3xl sm:text-5xl md:text-7xl font-orbitron font-black italic text-white mb-10 sm:mb-28 tracking-tighter leading-none max-w-6xl mx-auto uppercase drop-shadow-[0_0_30px_rgba(255,255,255,0.05)]">{currentQ.text}</h2>
+            <div className="grid gap-4 sm:gap-8 max-w-5xl mx-auto">
               {currentQ.options.map((opt: string, i: number) => (
-                <AorusButton key={i} variant="outline" onClick={() => handleAnswer(i)} className="w-full text-left py-10">
-                   <span className="flex justify-between items-center w-full px-8"><span className="max-w-[85%] text-2xl md:text-3xl tracking-tight leading-snug">{opt}</span><ChevronRight className="opacity-0 group-hover:opacity-100 transition-all text-orange-500 group-hover:translate-x-8" size={56} /></span>
+                <AorusButton key={i} variant="outline" onClick={() => handleAnswer(i)} className="w-full text-left py-5 sm:py-10">
+                   <span className="flex justify-between items-center w-full px-4 sm:px-8"><span className="max-w-[85%] text-lg sm:text-2xl md:text-3xl tracking-tight leading-snug">{opt}</span><ChevronRight className="w-6 h-6 sm:w-14 sm:h-14 opacity-0 group-hover:opacity-100 transition-all text-orange-500 group-hover:translate-x-4 sm:group-hover:translate-x-8" /></span>
                 </AorusButton>
               ))}
             </div>
@@ -546,7 +546,7 @@ const App = () => {
         )}
       </main>
 
-      <footer className="w-full bg-black border-t border-white/10 p-6 md:px-12 z-50 flex flex-col md:flex-row items-center justify-between gap-6 text-xs font-bold uppercase tracking-widest">
+      <footer className="w-full bg-black border-t border-white/10 p-4 sm:p-6 md:px-12 z-50 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 text-xs font-bold uppercase tracking-wide sm:tracking-widest">
         <div className="flex items-center gap-3 text-slate-500">
             <Activity size={16} className="text-orange-600 animate-pulse" />
             <span>AORUS CORE v9.6 // ONLINE</span>
