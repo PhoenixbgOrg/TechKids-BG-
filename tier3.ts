@@ -778,7 +778,7 @@ export const TIER3_QUESTIONS = [
     correct: 0,
     explanation: "При DDR5 над 6000+ MHz training може да отнеме 1–2 минути или да фейлне ако таймингите/напреженията са твърде агресивни.",
     fact: "SOC Voltage 1.25–1.3 V и VDD/VDDQ 1.35–1.4 V често са нужни за стабилност над 6200 MHz."
-  }
+  },
   {
     id: "t3-061",
     text: "Какво е най-честата причина за краш в Prime95 при малък FFT тест, но не и в Blend?",
@@ -1298,7 +1298,7 @@ export const TIER3_QUESTIONS = [
     correct: 0,
     explanation: "1% lows показват най-лошите моменти – често от CPU spikes, page faults или driver stuttering.",
     fact: "Закриване на всички background приложения и използване на High Performance power plan подобрява 1% lows."
-  }
+  },
   {
     id: "t3-101",
     text: "Какво означава 'PBO Scalar' в AMD BIOS и как влияе на буста?",
@@ -1688,7 +1688,7 @@ export const TIER3_QUESTIONS = [
     correct: 0,
     explanation: "Single-core boost често е 5.5–5.9 GHz – нормално е hotspot да е висок, докато другите ядра са студени.",
     fact: "Това е нормално поведение при Intel и AMD – не е дефект."
-  }
+  },
   {
     id: "t3-131",
     text: "Какво означава 'EDC' в AMD PBO и защо е важен?",
@@ -2078,7 +2078,7 @@ export const TIER3_QUESTIONS = [
     correct: 0,
     explanation: "Windows timer по подразбиране е 15.6 ms – програми като TimerResolution или ISLC го намаляват за по-добра responsiveness.",
     fact: "Много competitive геймъри ползват 0.5 ms timer resolution."
-  }
+  },
   {
     id: "t3-161",
     text: "Какво е най-честата причина за нисък IOPS на NVMe SSD в реални сценарии?",
