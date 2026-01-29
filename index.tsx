@@ -26,9 +26,13 @@ const shuffle = <T,>(array: T[]): T[] => {
 
 const processQuestion = (q: any) => {
   const originalOptions = [...(q.options || q.optionsBG || [])];
-  const correctText = originalOptions[q.correct ?? q.correctIdx ?? 0];
   const shuffledOptions = shuffle(originalOptions);
-  const newCorrectIdx = shuffledOptions.indexOf(correctText);
+
+  // Ако correct е < 0, въпросът е „без верен отговор“ (нарочно).
+  const rawCorrect = (q.correct ?? q.correctIdx ?? 0);
+  const newCorrectIdx = (typeof rawCorrect === 'number' && rawCorrect < 0)
+    ? -1
+    : shuffledOptions.indexOf(originalOptions[rawCorrect] ?? originalOptions[0]);
 
   return {
     ...q,
@@ -59,16 +63,18 @@ const generateSessionPool = (tierId: number) => {
     }
   }
   
+  // Tier 0: винаги слагаме финалния „квантов“ въпрос последен.
   if (tierId === 0) {
-  const finalId = 't0-260-final';
-  const finalQ = pool.find(q => q.id === finalId);
-  if (finalQ) {
-    const rest = pool.filter(q => q.id !== finalId);
-    const picked = shuffle(rest).slice(0, 49);
-    return [...picked, finalQ];
+    const finalId = 't0-260-final';
+    const finalQ = pool.find(q => q.id === finalId);
+    if (finalQ) {
+      const rest = pool.filter(q => q.id !== finalId);
+      const picked = shuffle(rest).slice(0, 49);
+      return [...picked, finalQ];
+    }
   }
-}
-return shuffle(pool).slice(0, 50);
+
+  return shuffle(pool).slice(0, 50);
 };
 
 // --- COMPONENT: MATRIX BACKGROUND ---
@@ -217,7 +223,7 @@ const App = () => {
 
   const skipExplanation = () => {
     const q = status === 'overclock' ? overclockQ : questions[qIndex];
-    // Ако това е квантовият финал на Tier 0 — поздрав и рестарт към началото (Tier 1)
+    // Ако това е финалният „квантов“ въпрос в Tier 0 — награда и рестарт към Tier 1.
     if (activeTier === 0 && q?.id === 't0-260-final') {
       setCopied(false);
       setReadConfirmed(false);
@@ -290,19 +296,8 @@ const App = () => {
 
   const handleAnswer = (idx: number) => {
     const q = status === 'overclock' ? overclockQ : questions[qIndex];
-    const isFinalTier0 = activeTier === 0 && q?.id === 't0-260-final';
-    const isCorrect = q?.correct >= 0 && idx === q.correct;
     
-    if (isFinalTier0) {
-      // Парадоксален финал: няма верен отговор, но награждаваме стигането до края
-      setPraiseMsg('КВАНТОВ ФИНАЛ: ДОСТИГНА КРАЯ. УВАЖЕНИЕ.');
-      setStatus('explaining');
-      setTimer(ANALYSIS_TIME);
-      setReadConfirmed(false);
-      return;
-    }
-    
-    if (isCorrect) {
+    if (idx === q.correct) {
       // Update Stats (Task B)
       const qKey = q.text; 
       const newCount = (questionStats[qKey] || 0) + 1;
@@ -490,6 +485,12 @@ const App = () => {
              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8 sm:mb-16">
                 <div className="flex-1">
                     <h2 className="font-orbitron text-3xl sm:text-5xl font-black italic uppercase text-orange-600 mb-3 sm:mb-4">{praiseMsg}</h2>
+	                {activeTier === 0 && currentQ?.id === 't0-260-final' ? (
+	                  <div className="mb-4 sm:mb-6">
+	                    <div className="text-white font-black italic text-xl sm:text-2xl leading-snug">КВАНТОВ ФИНАЛ — ДОСТИГНА КРАЯ.</div>
+	                    <div className="text-slate-400 text-sm sm:text-base">Няма верен отговор. Това е умишлено. Получаваш уважение и рестарт (New Game+).</div>
+	                  </div>
+	                ) : null}
                     <div className="w-full sm:w-48 h-2 bg-white/10 overflow-hidden">
                         <div className="h-full bg-orange-600 transition-all duration-1000 linear" style={{width: `${((ANALYSIS_TIME - timer) / ANALYSIS_TIME) * 100}%`}}></div>
                     </div>
