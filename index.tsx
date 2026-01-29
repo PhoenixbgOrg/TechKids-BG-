@@ -44,7 +44,7 @@ const processQuestion = (q: any) => {
   };
 };
 
-const DATA_MAP: Record<number, any[]> = {
+const DATA_MAP: Record<number, readonly any[]> = {
   1: TIER1_QUESTIONS,
   2: TIER2_QUESTIONS,
   3: TIER3_QUESTIONS,
