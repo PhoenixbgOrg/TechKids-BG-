@@ -59,7 +59,16 @@ const generateSessionPool = (tierId: number) => {
     }
   }
   
-  return shuffle(pool).slice(0, 50);
+  if (tierId === 0) {
+  const finalId = 't0-260-final';
+  const finalQ = pool.find(q => q.id === finalId);
+  if (finalQ) {
+    const rest = pool.filter(q => q.id !== finalId);
+    const picked = shuffle(rest).slice(0, 49);
+    return [...picked, finalQ];
+  }
+}
+return shuffle(pool).slice(0, 50);
 };
 
 // --- COMPONENT: MATRIX BACKGROUND ---
@@ -207,6 +216,24 @@ const App = () => {
   }, [playerName]);
 
   const skipExplanation = () => {
+    const q = status === 'overclock' ? overclockQ : questions[qIndex];
+    // Ако това е квантовият финал на Tier 0 — поздрав и рестарт към началото (Tier 1)
+    if (activeTier === 0 && q?.id === 't0-260-final') {
+      setCopied(false);
+      setReadConfirmed(false);
+      setActiveTier(1);
+      setUnlockedTiers([1]);
+      setQuestions([]);
+      setQIndex(0);
+      setLives(3);
+      setTimer(0);
+      setFailMsg('');
+      setIsFatalError(false);
+      setOverclockQ(null);
+      setStatus('playing');
+      setView('selector');
+      return;
+    }
     setCopied(false);
     setReadConfirmed(false);
     if (qIndex < 49) {
@@ -263,8 +290,19 @@ const App = () => {
 
   const handleAnswer = (idx: number) => {
     const q = status === 'overclock' ? overclockQ : questions[qIndex];
+    const isFinalTier0 = activeTier === 0 && q?.id === 't0-260-final';
+    const isCorrect = q?.correct >= 0 && idx === q.correct;
     
-    if (idx === q.correct) {
+    if (isFinalTier0) {
+      // Парадоксален финал: няма верен отговор, но награждаваме стигането до края
+      setPraiseMsg('КВАНТОВ ФИНАЛ: ДОСТИГНА КРАЯ. УВАЖЕНИЕ.');
+      setStatus('explaining');
+      setTimer(ANALYSIS_TIME);
+      setReadConfirmed(false);
+      return;
+    }
+    
+    if (isCorrect) {
       // Update Stats (Task B)
       const qKey = q.text; 
       const newCount = (questionStats[qKey] || 0) + 1;
