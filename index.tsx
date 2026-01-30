@@ -51,6 +51,52 @@ const DATA_MAP: Record<number, readonly any[]> = {
   0: TIER0_QUESTIONS
 };
 
+
+const SHADOW_QUESTIONS = [
+  { id: "sx-001", text: "Какво означава, че информацията в квантова система не може да се копира произволно (no-cloning theorem)?",
+    options: ["Не можеш да направиш перфектно копие на неизвестно квантово състояние", "Не можеш да копираш класически битове", "Кубитите не могат да се измерват", "Квантовите компютри нямат памет"],
+    correct: 0,
+    explanation: "No-cloning theorem казва, че не съществува универсална операция, която да клонира произволно неизвестно квантово състояние без грешка.",
+    fact: "Това е една от причините квантовата криптография да е принципно различна от класическата."
+  },
+  { id: "sx-002", text: "Кое е най-точното твърдение за суперпозиция при измерване?",
+    options: ["Измерването избира конкретен резултат според вероятностите", "Суперпозицията остава същата след измерване", "Измерването винаги дава средна стойност", "Суперпозицията означава, че резултатът е детерминиран"],
+    correct: 0,
+    explanation: "При измерване суперпозицията колабира към един от възможните резултати, като вероятностите се определят от амплитудите.",
+    fact: "Преди измерване системата може да интерферира – след измерване интерференцията за избраната база изчезва."
+  },
+  { id: "sx-003", text: "Какво е квантова заплетеност (entanglement) в най-практичен смисъл?",
+    options: ["Състоянията на две системи са описани общо и корелациите не се редуцират до локални скрити променливи", "Две системи винаги си обменят енергия", "Два кубита винаги имат еднакъв резултат при всяко измерване", "Заплетеността е просто вид шум"],
+    correct: 0,
+    explanation: "При entanglement общото състояние не може да се представи като произведение от отделни състояния; това води до специфични корелации.",
+    fact: "Заплетеност ≠ телепатия: не позволява предаване на информация по-бързо от светлината."
+  },
+  { id: "sx-004", text: "Кое е най-верният описателен проблем при NISQ квантовите машини днес?",
+    options: ["Шум и декохеренция ограничават дълбочината на полезните схеми", "Липса на ток за захранване", "Няма нужда от корекция на грешки", "Кубитите работят само при стайна температура"],
+    correct: 0,
+    explanation: "NISQ устройствата имат реални квантови ефекти, но шумът ограничава броя операции преди резултатът да се развали.",
+    fact: "Затова много демонстрации търсят умни схеми с малка дълбочина и частична устойчивост към шум."
+  },
+  { id: "sx-005", text: "Какво е 'фаза' в квантовата амплитуда и защо е важна?",
+    options: ["Ъглова част на амплитудата, която влияе на интерференцията", "Температурата на кубита", "Честотата на процесора", "Шумът от захранването"],
+    correct: 0,
+    explanation: "Фазата не се вижда директно като вероятност, но определя как амплитудите се събират/изваждат при интерференция.",
+    fact: "Много квантови алгоритми печелят точно чрез контрол на фазите."
+  },
+  { id: "sx-006", text: "Кое е най-точното за квантовата корекция на грешки (QEC)?",
+    options: ["Кодира логически кубит в много физически, за да се детектират/коригират грешки", "Премахва нуждата от измерване", "Ускорява тактовата честота", "Работи без допълнителни кубити"],
+    correct: 0,
+    explanation: "QEC използва редундантност и синдромни измервания, за да поддържа логическо състояние стабилно въпреки шум.",
+    fact: "Пълна устойчивост изисква много физически кубити за 1 логически."
+  },
+  { id: "sx-007", text: "Кое е най-близо до реалността за 'quantum advantage'?",
+    options: ["Практическо предимство за конкретна задача при реални ограничения и сравнима цена/време", "Винаги по-бързо за всичко", "Само маркетинг термин", "Възможност да се прескочи криптографията моментално"],
+    correct: 0,
+    explanation: "Quantum advantage означава измеримо предимство за конкретна задача при реални условия, не магия за всички проблеми.",
+    fact: "Често има разлика между 'supremacy' демонстрации и полезно предимство в реални приложения."
+  }
+].map(processQuestion);
+
 const generateSessionPool = (tierId: number) => {
   const rawData = DATA_MAP[tierId] || [];
   let pool = rawData.map(processQuestion);
@@ -183,6 +229,13 @@ const ANALYSIS_TIME = 3;
 
 const App = () => {
   const [view, setView] = useState('home');
+  const [isMobile, setIsMobile] = useState(false);
+  const [glitchMode, setGlitchMode] = useState(false);
+  const [combo, setCombo] = useState(0);
+  const [pendingShadow, setPendingShadow] = useState(false);
+  const [shadowActive, setShadowActive] = useState(false);
+  const shadowReturnRef = useRef<any>(null);
+  const [shadowToast, setShadowToast] = useState<string | null>(null);
   const [playerName, setPlayerName] = useState("");
   const [activeTier, setActiveTier] = useState<number>(1);
   const [unlockedTiers, setUnlockedTiers] = useState<number[]>([1]);
@@ -202,7 +255,15 @@ const App = () => {
   const [readConfirmed, setReadConfirmed] = useState(false);
 
   // Load persistence
+  
   useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+useEffect(() => {
     const savedName = localStorage.getItem('aorus_player_name');
     if (savedName) setPlayerName(savedName);
 
@@ -296,8 +357,9 @@ const App = () => {
 
   const handleAnswer = (idx: number) => {
     const q = status === 'overclock' ? overclockQ : questions[qIndex];
+    const isCorrect = q?.correct >= 0 && idx === q.correct;
     
-    if (idx === q.correct) {
+    if (isCorrect) {
       // Update Stats (Task B)
       const qKey = q.text; 
       const newCount = (questionStats[qKey] || 0) + 1;
@@ -396,8 +458,32 @@ const App = () => {
   const analysisHeader = ANALYSIS_HEADERS[qIndex % ANALYSIS_HEADERS.length];
 
   if (view === 'home') return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-black">
+    <div className={`min-h-screen flex flex-col items-center justify-center p-6 text-center bg-black ${glitchMode ? "glitch" : ""}`}>
       <MatrixBackground />
+      {shadowToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 bg-black/90 border border-orange-600 text-orange-600 font-black uppercase tracking-widest text-[11px] backdrop-blur-2xl shadow-2xl glitch">
+          {shadowToast}
+        </div>
+      )}
+
+      {shadowToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 bg-black/90 border border-orange-600 text-orange-600 font-black uppercase tracking-widest text-[11px] backdrop-blur-2xl shadow-2xl glitch">
+          {shadowToast}
+        </div>
+      )}
+
+      {shadowToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 bg-black/90 border border-orange-600 text-orange-600 font-black uppercase tracking-widest text-[11px] backdrop-blur-2xl shadow-2xl glitch">
+          {shadowToast}
+        </div>
+      )}
+
+      {shadowToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 bg-black/90 border border-orange-600 text-orange-600 font-black uppercase tracking-widest text-[11px] backdrop-blur-2xl shadow-2xl glitch">
+          {shadowToast}
+        </div>
+      )}
+
       <h1 className="font-orbitron text-[clamp(4rem,15vw,12rem)] font-black italic text-white tracking-tighter leading-none mb-12 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
         AORUS<br/><span className="text-orange-600">ACADEMY</span>
       </h1>
@@ -408,7 +494,7 @@ const App = () => {
   );
 
   if (view === 'entry') return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-black">
+    <div className={`min-h-screen flex items-center justify-center p-6 bg-black ${glitchMode ? "glitch" : ""}`}>
       <MatrixBackground />
       <div className="max-w-md w-full border border-white/10 p-12 bg-black/95 backdrop-blur-3xl rounded-[2rem] shadow-[0_0_150px_rgba(255,107,0,0.05)]">
         <Terminal className="text-orange-600 mx-auto mb-10" size={72} />
@@ -428,7 +514,7 @@ const App = () => {
   );
 
   if (view === 'selector') return (
-    <div className="min-h-screen p-10 flex flex-col bg-[#020202]">
+    <div className={`min-h-screen p-10 flex flex-col bg-[#020202] ${glitchMode ? "glitch" : ""}`}>
       <MatrixBackground />
       <header className="flex justify-between items-center mb-20 border-b border-white/5 pb-10 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-6 text-sm font-black uppercase tracking-widest text-white italic">
@@ -456,7 +542,7 @@ const App = () => {
   const activeMeta = meta[activeTier];
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-black selection:bg-orange-600 selection:text-white overflow-x-hidden">
+    <div className={`min-h-screen flex flex-col relative bg-black selection:bg-orange-600 selection:text-white overflow-x-hidden ${glitchMode ? "glitch" : ""}`}>
       <MatrixBackground />
       {status === 'failed' && <div className="fixed inset-0 bg-red-600/10 emergency-reset -z-5 pointer-events-none"></div>}
       <header className="h-28 border-b border-white/5 flex items-center justify-between px-16 bg-black/90 backdrop-blur-2xl z-50">
@@ -481,7 +567,26 @@ const App = () => {
             </AorusButton>
           </div>
         ) : status === 'explaining' ? (
-          <div className="bg-black/95 p-6 sm:p-10 lg:p-20 border-l-[10px] sm:border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
+          isMobile ? (
+          <MobileAnalysisUI
+            praiseMsg={praiseMsg}
+            analysisHeader={analysisHeader}
+            qCount={qCount}
+            currentQ={questions[qIndex]}
+            timer={timer}
+            ANALYSIS_TIME={ANALYSIS_TIME}
+            copied={copied}
+            handleShare={handleShare}
+            readConfirmed={readConfirmed}
+            setReadConfirmed={setReadConfirmed}
+            skipExplanation={skipExplanation}
+            canShowOverclock={canShowOverclock}
+            triggerOverclock={triggerOverclock}
+            qIndex={qIndex}
+            shadowActive={shadowActive}
+          />
+        ) : (
+<div className="bg-black/95 p-6 sm:p-10 lg:p-20 border-l-[10px] sm:border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8 sm:mb-16">
                 <div className="flex-1">
                     <h2 className="font-orbitron text-3xl sm:text-5xl font-black italic uppercase text-orange-600 mb-3 sm:mb-4">{praiseMsg}</h2>
@@ -561,6 +666,7 @@ const App = () => {
                 )}
              </div>
           </div>
+          )
         ) : (
           <div className="w-full fade-in">
             {status === 'overclock' && (
@@ -603,5 +709,112 @@ const App = () => {
     </div>
   );
 };
+
+
+function MobileAnalysisUI(props: any) {
+  const {
+    praiseMsg,
+    analysisHeader,
+    qCount,
+    currentQ,
+    timer,
+    ANALYSIS_TIME,
+    copied,
+    handleShare,
+    readConfirmed,
+    setReadConfirmed,
+    skipExplanation,
+    canShowOverclock,
+    triggerOverclock,
+    qIndex,
+    shadowActive
+  } = props;
+
+  if (!currentQ) return null;
+
+  const progress = Math.max(0, Math.min(100, ((ANALYSIS_TIME - timer) / ANALYSIS_TIME) * 100));
+
+  return (
+    <div className="bg-black/95 p-4 border-l-8 border-orange-600 w-full max-w-[96vw] mx-auto backdrop-blur-3xl relative">
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="font-orbitron text-xl font-black italic uppercase text-orange-600 leading-tight break-words">
+          {praiseMsg}
+        </div>
+
+        <div className="w-full h-2 bg-white/10 overflow-hidden rounded">
+          <div className="h-full bg-orange-600 transition-all duration-1000 linear" style={{ width: `${progress}%` }} />
+        </div>
+
+        <button
+          onClick={handleShare}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded border border-white/15 bg-white/5 hover:bg-white/10 text-white transition-all active:scale-[0.99]"
+        >
+          <span className="text-[11px] font-black uppercase tracking-[0.18em]">
+            {copied ? "COPIED" : "SHARE"}
+          </span>
+        </button>
+      </div>
+
+      <div className="space-y-4 mb-4">
+        <div className="border-l-2 border-slate-700 pl-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500 mb-2">
+            {analysisHeader}:
+          </div>
+
+          <div className="text-base text-white font-black italic leading-snug break-words">
+            {currentQ.explanation}
+          </div>
+
+          {qCount > 1 && (
+            <div className="text-[10px] text-orange-600 mt-2 uppercase tracking-[0.18em] break-words">
+              * ПОВТОРЕН АНАЛИЗ (ВИДЯНО {qCount} ПЪТИ)
+            </div>
+          )}
+        </div>
+
+        <div className="border border-dashed border-white/15 rounded-xl p-3">
+          <div className="text-orange-600/80 font-black text-[10px] uppercase tracking-[0.18em] mb-2">
+            Инженерни данни:
+          </div>
+          <div className="text-slate-300 italic text-sm leading-snug break-words">
+            “{currentQ.fact}”
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-3 border-t border-white/10">
+        <button
+          onClick={() => setReadConfirmed(!readConfirmed)}
+          disabled={timer > 0}
+          className={`w-full px-4 py-3 rounded-xl border-2 font-black uppercase text-[11px] tracking-[0.16em] transition-all
+            ${readConfirmed ? "border-green-500 bg-green-900/10 text-green-300" : "border-slate-700 text-slate-300"}
+            ${timer > 0 ? "opacity-50 cursor-not-allowed" : "active:scale-[0.99]"}`}
+        >
+          {readConfirmed ? "ПРОЧЕТОХ ✓" : "ПОТВЪРДИ ЧЕТЕНЕ"}
+        </button>
+
+        <button
+          onClick={() => timer === 0 && readConfirmed && skipExplanation()}
+          disabled={timer > 0 || !readConfirmed}
+          className={`w-full px-4 py-4 rounded-xl font-black uppercase tracking-[0.16em] text-sm transition-all
+            ${timer > 0 || !readConfirmed ? "bg-white/5 text-white/40 border border-white/10" : "bg-orange-600 text-black active:scale-[0.99]"}`}
+        >
+          {timer > 0 ? "ЗАРЕЖДАНЕ..." : shadowActive ? "ВРЪЩАНЕ" : "ПРОДЪЛЖИ"}
+        </button>
+
+        {canShowOverclock && !shadowActive && (
+          <button
+            onClick={triggerOverclock}
+            disabled={timer > 0 || !readConfirmed}
+            className={`w-full px-4 py-4 rounded-xl font-black uppercase tracking-[0.16em] text-sm transition-all
+              ${timer > 0 || !readConfirmed ? "bg-red-900/20 text-red-200/40 border border-red-500/20" : "bg-red-600 text-black active:scale-[0.99]"}`}
+          >
+            {qIndex >= 44 ? "TIER SKIP OVERCLOCK" : "SPEEDRUN OVERCLOCK"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 createRoot(document.getElementById('root')!).render(<App />);
