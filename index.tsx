@@ -26,9 +26,13 @@ const shuffle = <T,>(array: T[]): T[] => {
 
 const processQuestion = (q: any) => {
   const originalOptions = [...(q.options || q.optionsBG || [])];
-  const correctText = originalOptions[q.correct ?? q.correctIdx ?? 0];
   const shuffledOptions = shuffle(originalOptions);
-  const newCorrectIdx = shuffledOptions.indexOf(correctText);
+
+  // Ако correct е < 0, въпросът е „без верен отговор“ (нарочно).
+  const rawCorrect = (q.correct ?? q.correctIdx ?? 0);
+  const newCorrectIdx = (typeof rawCorrect === 'number' && rawCorrect < 0)
+    ? -1
+    : shuffledOptions.indexOf(originalOptions[rawCorrect] ?? originalOptions[0]);
 
   return {
     ...q,
@@ -40,7 +44,7 @@ const processQuestion = (q: any) => {
   };
 };
 
-const DATA_MAP: Record<number, any[]> = {
+const DATA_MAP: Record<number, readonly any[]> = {
   1: TIER1_QUESTIONS,
   2: TIER2_QUESTIONS,
   3: TIER3_QUESTIONS,
@@ -59,6 +63,17 @@ const generateSessionPool = (tierId: number) => {
     }
   }
   
+  // Tier 0: винаги слагаме финалния „квантов“ въпрос последен.
+  if (tierId === 0) {
+    const finalId = 't0-260-final';
+    const finalQ = pool.find(q => q.id === finalId);
+    if (finalQ) {
+      const rest = pool.filter(q => q.id !== finalId);
+      const picked = shuffle(rest).slice(0, 49);
+      return [...picked, finalQ];
+    }
+  }
+
   return shuffle(pool).slice(0, 50);
 };
 
@@ -207,6 +222,24 @@ const App = () => {
   }, [playerName]);
 
   const skipExplanation = () => {
+    const q = status === 'overclock' ? overclockQ : questions[qIndex];
+    // Ако това е финалният „квантов“ въпрос в Tier 0 — награда и рестарт към Tier 1.
+    if (activeTier === 0 && q?.id === 't0-260-final') {
+      setCopied(false);
+      setReadConfirmed(false);
+      setActiveTier(1);
+      setUnlockedTiers([1]);
+      setQuestions([]);
+      setQIndex(0);
+      setLives(3);
+      setTimer(0);
+      setFailMsg('');
+      setIsFatalError(false);
+      setOverclockQ(null);
+      setStatus('playing');
+      setView('selector');
+      return;
+    }
     setCopied(false);
     setReadConfirmed(false);
     if (qIndex < 49) {
@@ -448,39 +481,45 @@ const App = () => {
             </AorusButton>
           </div>
         ) : status === 'explaining' ? (
-          <div className="bg-black/95 p-20 border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
-             <div className="flex justify-between items-end mb-16">
+          <div className="bg-black/95 p-6 sm:p-10 lg:p-20 border-l-[10px] sm:border-l-[16px] text-left shadow-2xl w-full border-orange-600 fade-in max-w-5xl backdrop-blur-3xl relative">
+             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8 sm:mb-16">
                 <div className="flex-1">
-                    <h2 className="font-orbitron text-5xl font-black italic uppercase text-orange-600 mb-4">{praiseMsg}</h2>
-                    <div className="w-48 h-2 bg-white/10 overflow-hidden">
+                    <h2 className="font-orbitron text-3xl sm:text-5xl font-black italic uppercase text-orange-600 mb-3 sm:mb-4">{praiseMsg}</h2>
+	                {activeTier === 0 && currentQ?.id === 't0-260-final' ? (
+	                  <div className="mb-4 sm:mb-6">
+	                    <div className="text-white font-black italic text-xl sm:text-2xl leading-snug">КВАНТОВ ФИНАЛ — ДОСТИГНА КРАЯ.</div>
+	                    <div className="text-slate-400 text-sm sm:text-base">Няма верен отговор. Това е умишлено. Получаваш уважение и рестарт (New Game+).</div>
+	                  </div>
+	                ) : null}
+                    <div className="w-full sm:w-48 h-2 bg-white/10 overflow-hidden">
                         <div className="h-full bg-orange-600 transition-all duration-1000 linear" style={{width: `${((ANALYSIS_TIME - timer) / ANALYSIS_TIME) * 100}%`}}></div>
                     </div>
                 </div>
                 <button 
                   onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2 rounded border border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all active:scale-95 group"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded border border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all active:scale-95 group"
                 >
                   {copied ? <Check size={20} className="text-green-500" /> : <Share2 size={20} className="text-slate-300 group-hover:text-white" />}
-                  <span className="text-xs font-black uppercase tracking-widest">{copied ? "COPIED" : "SHARE"}</span>
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-widest">{copied ? "COPIED" : "SHARE"}</span>
                 </button>
              </div>
              
-             <div className="space-y-12 mb-16">
+             <div className="space-y-6 sm:space-y-12 mb-8 sm:mb-16">
                 <div className="pl-6 border-l-2 border-slate-700">
                     <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 mb-2 block">{analysisHeader}:</span>
                     {qCount > 1 ? (
                         <div>
-                             <p className="text-2xl text-white font-bold italic leading-tight opacity-90">"{currentQ.explanation.split('.')[0]}."</p>
-                             <span className="text-xs text-orange-600 mt-2 block uppercase tracking-widest">* ПОВТОРЕН АНАЛИЗ (ВИДЯНО {qCount} ПЪТИ)</span>
+                             <p className="text-lg sm:text-2xl text-white font-bold italic leading-snug sm:leading-tight opacity-90">"{currentQ.explanation.split('.')[0]}."</p>
+                             <span className="text-[10px] sm:text-xs text-orange-600 mt-2 block uppercase tracking-[0.2em] sm:tracking-widest">* ПОВТОРЕН АНАЛИЗ (ВИДЯНО {qCount} ПЪТИ)</span>
                         </div>
                     ) : (
-                        <p className="text-3xl text-white font-black italic leading-tight">{currentQ.explanation}</p>
+                        <p className="text-xl sm:text-3xl text-white font-black italic leading-snug sm:leading-tight">{currentQ.explanation}</p>
                     )}
                 </div>
 
-                <div className="bg-transparent p-10 border border-dashed border-white/20 relative overflow-hidden rounded-xl">
-                    <span className="text-orange-600/80 font-black text-xs uppercase tracking-[1.5em] block mb-4">Инженерни Данни:</span>
-                    <p className="text-slate-400 italic text-xl">"{currentQ.fact}"</p>
+                <div className="bg-transparent p-4 sm:p-8 md:p-10 border border-dashed border-white/20 relative overflow-hidden rounded-xl">
+                    <span className="text-orange-600/80 font-black text-[10px] sm:text-xs uppercase tracking-[0.25em] sm:tracking-[1.5em] block mb-3 sm:mb-4">Инженерни Данни:</span>
+                    <p className="text-slate-400 italic text-base sm:text-xl">"{currentQ.fact}"</p>
                 </div>
              </div>
              
@@ -496,14 +535,14 @@ const App = () => {
                         } ${timer > 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                         {readConfirmed ? <CheckSquare size={24} /> : <Square size={24} />}
-                        <span className="font-black uppercase tracking-widest text-sm">Потвърждавам, че прочетох</span>
+                        <span className="font-black uppercase tracking-[0.12em] sm:tracking-widest text-xs sm:text-sm text-center leading-snug whitespace-normal">Потвърждавам, че прочетох</span>
                     </button>
 
                     <AorusButton 
                         variant="secondary" 
                         onClick={() => timer === 0 && readConfirmed && skipExplanation()} 
                         disabled={timer > 0 || !readConfirmed}
-                        className="w-full md:w-auto text-xl py-6"
+                        className="w-full md:w-auto text-base sm:text-xl py-4 sm:py-6"
                     >
                         {timer > 0 ? "ЗАРЕЖДАНЕ..." : "ПРОДЪЛЖИ"} <ChevronRight />
                     </AorusButton>
